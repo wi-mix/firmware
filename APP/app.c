@@ -180,10 +180,19 @@ int main ()
 *********************************************************************************************************
 */
 
-static  void  AppTaskStart (void *p_arg)
-{
+void display7Seg(uint8_t top, uint16_t bottom){
+    alt_write_word(HEX0_BASE, bottom);
+    alt_write_word(HEX1_BASE, bottom>>4);
+    alt_write_word(HEX2_BASE, bottom>>8);
+    alt_write_word(HEX3_BASE, bottom>>12);
+    alt_write_word(HEX4_BASE, top);
+    alt_write_word(HEX5_BASE, top>>4);
+}
+
+static  void  AppTaskStart (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
+    uint8_t count = 0;
     uint32_t val = 0;
 
     for(;;) {
@@ -196,13 +205,8 @@ static  void  AppTaskStart (void *p_arg)
         BSP_LED_Off();
 
         val = alt_read_word(SW_BASE);
-        alt_write_word(LEDR_BASE, val);
-        alt_write_word(HEX0_BASE, val);
-        alt_write_word(HEX1_BASE, val);
-        alt_write_word(HEX2_BASE, val);
-        alt_write_word(HEX3_BASE, val);
-        alt_write_word(HEX4_BASE, val);
-        alt_write_word(HEX5_BASE, val);
+        display7Seg(count, val);
+        count += 1;
     }
 
 }
