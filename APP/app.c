@@ -72,6 +72,30 @@
 #define SW_ADD 0x00001100
 #define SW_BASE FPGA_TO_HPS_LW_ADDR(SW_ADD)
 
+// ADC Read Addresses
+#define ADC_CH0 0x00001200
+#define ADC_CH0_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH0)
+#define ADC_CH1 0x00001204
+#define ADC_CH1_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH1)
+#define ADC_CH2 0x00001208
+#define ADC_CH2_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH2)
+#define ADC_CH3 0x0000120C
+#define ADC_CH3_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH3)
+#define ADC_CH4 0x00001210
+#define ADC_CH4_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH4)
+#define ADC_CH5 0x00001214
+#define ADC_CH5_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH5)
+#define ADC_CH6 0x00001218
+#define ADC_CH6_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH6)
+#define ADC_CH7 0x0000121C
+#define ADC_CH7_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH7)
+// ADC Write Addresses
+#define ADC_UP 0x00001200
+#define ADC_UP_BASE FPGA_TO_HPS_LW_ADDR(ADC_UP)
+#define ADC_AUTO 0x00001204
+#define ADC_AUTO_BASE FPGA_TO_HPS_LW_ADDR(ADC_AUTO)
+
+// Hex Locations
 #define HEX0_ADD 0x00000100
 #define HEX0_BASE FPGA_TO_HPS_LW_ADDR(HEX0_ADD)
 #define HEX1_ADD 0x00000110
@@ -87,6 +111,7 @@
 
 #define APP_TASK_PRIO 5
 #define TASK_STACK_SIZE 4096
+#define ADC_TASK_PRIO 4
 
 /*
 *********************************************************************************************************
@@ -95,6 +120,7 @@
 */
 
 CPU_STK AppTaskStartStk[TASK_STACK_SIZE];
+CPU_STK ADCTaskStartStk[TASK_STACK_SIZE];
 
 
 /*
@@ -104,6 +130,7 @@ CPU_STK AppTaskStartStk[TASK_STACK_SIZE];
 */
 
 static  void  AppTaskStart              (void        *p_arg);
+static  void  ADCTaskStart              (void        *p_arg);
 
 
 /*
@@ -133,6 +160,8 @@ int main ()
     BSP_CachesEn();                                             /* Enable L1 I&D caches + L2 unified cache.             */
 
 
+    alt_write_word(ADC_AUTO_BASE, 1);
+
     CPU_Init();
 
     Mem_Init();
@@ -149,6 +178,20 @@ int main ()
                              (INT8U           ) APP_TASK_PRIO,
                              (INT16U          ) APP_TASK_PRIO,  // reuse prio for ID
                              (OS_STK        * )&AppTaskStartStk[0],
+                             (INT32U          ) TASK_STACK_SIZE,
+                             (void          * )0,
+                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+
+    if (os_err != OS_ERR_NONE) {
+        ; /* Handle error. */
+    }
+
+    os_err = OSTaskCreateExt((void (*)(void *)) ADCTaskStart,   /* Create the start task.                               */
+                             (void          * ) 0,
+                             (OS_STK        * )&ADCTaskStartStk[TASK_STACK_SIZE - 1],
+                             (INT8U           ) ADC_TASK_PRIO,
+                             (INT16U          ) ADC_TASK_PRIO,  // reuse prio for ID
+                             (OS_STK        * )&ADCTaskStartStk[0],
                              (INT32U          ) TASK_STACK_SIZE,
                              (void          * )0,
                              (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
@@ -189,24 +232,42 @@ void display7Seg(uint8_t top, uint16_t bottom){
     alt_write_word(HEX5_BASE, top>>4);
 }
 
+int32_t min = 0;
+int32_t max = 0;
+float minf = 0;
+float maxf = 0;
+
 static  void  AppTaskStart (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
     uint8_t count = 0;
-    uint32_t val = 0;
 
     for(;;) {
-        BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
+        OSTimeDlyHMSM(0, 0, 10, 000);
 
+        // BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
+    	/*
         OSTimeDlyHMSM(0, 0, 0, 500);
         BSP_LED_On();
 
         OSTimeDlyHMSM(0, 0, 0, 500);
         BSP_LED_Off();
 
-        val = alt_read_word(SW_BASE);
-        display7Seg(count, val);
         count += 1;
+        alt_write_word(LEDR_BASE, count);
+        */
+    }
+
+}
+
+static  void  ADCTaskStart (void *p_arg) {
+	int32_t raw = (alt_read_word(ADC_CH1_BASE));
+
+    for(;;) {
+    	BSP_WatchDog_Reset();
+    	raw = (0xFFF & alt_read_word(ADC_CH1_BASE));
+    	printf("Raw: %d\n", raw);
+        OSTimeDlyHMSM(0, 0, 0, 100);
     }
 
 }
