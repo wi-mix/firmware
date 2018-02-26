@@ -35,12 +35,15 @@
 *.i*86
 *.x86_64
 *.hex
+*.axf
 
 # Debug files
 *.dSYM/
 *.su
 *.idb
 *.pdb
+*.dat
+
 
 # Kernel Module Compile Results
 *.mod*
@@ -51,3 +54,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 /Debug/
+/.metadata/
