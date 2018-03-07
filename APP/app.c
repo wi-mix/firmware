@@ -58,8 +58,6 @@
 #include  <socal.h>
 #include  <hwlib.h>
 
-#include "http_parser.h"
-
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
