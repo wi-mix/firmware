@@ -11,7 +11,7 @@ typedef struct recipe
 {
     ingredient ingredients[3],
     unsigned char ordered,
-    unsigned char ingredient_count,
+    unsigned char ingredient_count
 } recipe;
 
 typedef struct canister
