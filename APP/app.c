@@ -147,7 +147,6 @@ static  void  ADCTaskStart              (void        *p_arg);
 *                   initialisation.
 *********************************************************************************************************
 */
-int bench(int iter_count, int silent);
 
 int main ()
 {
