@@ -58,6 +58,9 @@
 #include  <socal.h>
 #include  <hwlib.h>
 
+#include "command_controller/command_controller.h"
+#include "models/models.h"
+
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
@@ -109,7 +112,7 @@
 #define HEX5_ADD 0x00000150
 #define HEX5_BASE FPGA_TO_HPS_LW_ADDR(HEX5_ADD)
 
-#define APP_TASK_PRIO 4
+#define APP_TASK_PRIO 6
 #define TASK_STACK_SIZE 4096
 #define ADC_TASK_PRIO 5
 

@@ -3,6 +3,8 @@
 #include "../models/models.h"
 #include <stdbool.h>
 
+#define CMD_TASK_PRIO 4
+#define DISPENSE_TASK_PRIO 5
 typedef enum dispensing_status
 {
     ACCEPTING,
@@ -20,10 +22,13 @@ typedef struct command_controller
     bool busy
 } command_controller;
 
-command_controller * initialize_cmd_ctrl();
+command_controller * initialize_cmd_ctrl(command_controller * controller);
 
 //Task prototype for dispensing
+//Takes a command_controller pointer
 void  DispensingTask (void *p_arg);
+
+
 
 
 #endif //__CMD_CONTROL_H
