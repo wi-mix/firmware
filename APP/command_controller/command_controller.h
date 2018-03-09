@@ -28,6 +28,10 @@ command_controller * initialize_cmd_ctrl(command_controller * controller);
 //Takes a command_controller pointer
 void  DispensingTask (void *p_arg);
 
+void dispense(command_controller * controller, recipe * recipe);
+
+void command_handler(command_controller * controller);
+
 
 
 
