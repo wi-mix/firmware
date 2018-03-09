@@ -1,4 +1,4 @@
-#include  <os.h>
+//#include  <os.h>
 #include <stdbool.h>
 #include "command_controller.h"
 #include "../models/models.h"
@@ -9,7 +9,7 @@ void DispensingTask (void *p_arg)
     //Dereference controller
     command_controller * ctrl = (command_controller *)p_arg;
 
-    recipe * recipe = ctrl->recipe;
+    recipe * recipe = ctrl->current_recipe;
     ctrl->busy = true;
 
     //Dispense liquid
@@ -18,5 +18,5 @@ void DispensingTask (void *p_arg)
 
     //Unbusy
     ctrl->busy = false;
-    OSTaskDel(OS_PRIO_SELF);
+    //OSTaskDel(OS_PRIO_SELF);
 }

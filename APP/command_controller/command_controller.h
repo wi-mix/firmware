@@ -11,16 +11,16 @@ typedef enum dispensing_status
     DISPENSING
 } dispensing_status;
 
-
-typedef struct command_controller
+typedef struct command_controller command_controller;
+struct command_controller
 {
-    dispensing_status state, //Status of the controller
-    int heartbeat_timer, // How often to send updates to the PROWF
-    void (*dispense)(command_controller * this, recipe * recipe),
-    void (*command_handler)(command_controller * this),
-    recipe * current_recipe,
-    bool busy
-} command_controller;
+    dispensing_status state; //Status of the controller
+    int heartbeat_timer; // How often to send updates to the PROWF
+    void (*dispense)(command_controller *, recipe *);
+    void (*command_handler)(command_controller *);
+    recipe * current_recipe;
+    bool busy;
+};
 
 command_controller * initialize_cmd_ctrl(command_controller * controller);
 
