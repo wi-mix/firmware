@@ -60,6 +60,7 @@
 
 #include "command_controller/command_controller.h"
 #include "models/models.h"
+#include <alt_i2c.h>
 
 
 // Compute absolute address of any slave component attached to lightweight bridge
@@ -114,7 +115,7 @@
 
 #define APP_TASK_PRIO 6
 #define TASK_STACK_SIZE 4096
-#define ADC_TASK_PRIO 5
+#define ADC_TASK_PRIO 7
 
 /*
 *********************************************************************************************************

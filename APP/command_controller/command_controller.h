@@ -15,11 +15,10 @@ typedef struct command_controller command_controller;
 struct command_controller
 {
     dispensing_status state; //Status of the controller
-    int heartbeat_timer; // How often to send updates to the PROWF
     void (*dispense)(command_controller *, recipe *);
     void (*command_handler)(command_controller *);
     recipe * current_recipe;
-    bool busy;
+    ALT_I2C_DEV_t command_i2c;
 };
 
 command_controller * initialize_cmd_ctrl(command_controller * controller);
@@ -28,11 +27,8 @@ command_controller * initialize_cmd_ctrl(command_controller * controller);
 //Takes a command_controller pointer
 void  DispensingTask (void *p_arg);
 
-void dispense(command_controller * controller, recipe * recipe);
+void dispense(command_controller * controller, recipe * my_recipe);
 
 void command_handler(command_controller * controller);
-
-
-
 
 #endif //__CMD_CONTROL_H
