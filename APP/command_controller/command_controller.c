@@ -11,14 +11,14 @@ void DispensingTask (void *p_arg)
     command_controller * ctrl = (command_controller *)p_arg;
 
     recipe * recipe = ctrl->current_recipe;
-    ctrl->busy = true;
+    ctrl->state = DISPENSING;
 
     //Dispense liquid
 
     //Update liquid levels
 
     //Unbusy
-    ctrl->busy = false;
+    ctrl->state = ACCEPTING;
     OSTaskDel(OS_PRIO_SELF);
 }
 
@@ -41,10 +41,8 @@ void dispense(command_controller * controller, recipe * my_recipe)
 command_controller * initialize_cmd_ctrl(command_controller * controller)
 {
     controller->state = ACCEPTING;
-    controller->heartbeat_timer = 100;
     controller->dispense = &dispense;
     controller->command_handler = &command_handler;
-    controller->heartbeat_callback = &heartbeat_callback;
 
     init_I2C2(&(controller->command_i2c));
 }

@@ -1,6 +1,7 @@
 #ifndef CMD_CONTROL_H
 #define CMD_CONTROL_H
 #include "../models/models.h"
+#include "../HWLIBS/alt_i2c.h"
 #include <stdbool.h>
 
 #define CMD_TASK_PRIO 4

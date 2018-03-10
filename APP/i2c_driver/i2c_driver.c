@@ -1,7 +1,13 @@
 #include  <os.h>
 #include <stdbool.h>
+#include "socal/hps.h"
+#include "socal/socal.h"
+#include "lib_def.h"
+#include "os_cpu.h"
+#include <string.h>
 #include "../HWLIBS/alt_i2c.h"
 #include "../models/models.h"
+#include "i2c_driver.h"
 
 static ALT_I2C_DEV_t * i2c2_device;
 #define HALF_FULL 32
@@ -22,7 +28,7 @@ void init_I2C2(ALT_I2C_DEV_t * device)
     
     alt_i2c_slave_config_set(i2c2_device, &slave_config);
 
-    alt_i2c_int_disble(i2c2_device, ALT_I2C_STATUS_INT_ALL);
+    alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
     alt_i2c_int_enable(i2c2_device, 
                         ALT_I2C_STATUS_STOP_DET | 
                         ALT_I2C_STATUS_RX_DONE | 
@@ -37,7 +43,7 @@ void init_I2C2(ALT_I2C_DEV_t * device)
 
 void init_I2C2_interrupt(void)
 {
-    BSP_IntVectSet(192u,   // 192 is interrupt source for i2c2
+    BSP_IntVectSet(I2C2_INTERRUPT_VECTOR,   // 192 is interrupt source for i2c2
                 1,    // prio
                 DEF_BIT_00,	    // cpu target list
                 I2C2_ISR_Handler  // ISR
@@ -48,24 +54,24 @@ void I2C2_ISR_Handler(CPU_INT32U cpu_id) {
     uint32_t mask = 0;
 
     alt_i2c_int_status_get(i2c2_device, &mask);
-    int rx_count = false;
+    uint32_t rx_count = false;
 
     //RX buffer over watermark or write complete
     if(mask & ALT_I2C_STATUS_RX_FULL)
     {
-        alt_i2c_rx_fifo_level_get(i2c2_device, &rx_count)
+        alt_i2c_rx_fifo_level_get(i2c2_device, &rx_count);
         for(int i = 0; i < rx_count; i++)
         {
-            alt_i2c_slave_receive(i2c2_device, I2C2_Internal_RX_Buffer[rx_write_pos]);
+            alt_i2c_slave_receive(i2c2_device, &(I2C2_Internal_RX_Buffer[rx_write_pos]));
             rx_write_pos++;
         }
     }
     else if(mask & ALT_I2C_STATUS_STOP_DET)
     {
-        alt_i2c_rx_fifo_level_get(i2c2_device, &rx_count)
+        alt_i2c_rx_fifo_level_get(i2c2_device, &rx_count);
         for(int i = 0; i < rx_count; i++)
         {
-            alt_i2c_slave_receive(i2c2_device, I2C2_Internal_RX_Buffer[rx_write_pos]);
+            alt_i2c_slave_receive(i2c2_device, &(I2C2_Internal_RX_Buffer[rx_write_pos]));
             rx_write_pos ++;
         }
         rx_write_pos = 0;
@@ -89,7 +95,7 @@ ALT_STATUS_CODE write(void * data, size_t size)
     alt_i2c_slave_bulk_transmit(i2c2_device, data, size);
 }
 
-int read(void * data, size_t size)
+void read(void * data, size_t size)
 {
     memcpy(data, I2C2_Internal_RX_Buffer, size);
     memset(I2C2_Internal_RX_Buffer, 0, 256);

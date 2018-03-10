@@ -355,7 +355,7 @@ typedef enum ALT_I2C_STATUS_e
  * alt_i2c_int_clear() is called with ALT_I2C_STATUS_ALL in the mask.
  *
  * \internal
- * Discuss special handling of abrt_sbyte_norstrt TX_ABRT source required in ???() function.
+ * Discuss special handling of abrt_sbyte_norstrt TX_ABRT source required in ?() function.
  * \endinternal
  */
 typedef enum ALT_I2C_TX_ABORT_CAUSE_e
