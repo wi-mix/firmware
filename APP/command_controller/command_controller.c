@@ -16,7 +16,7 @@ void DispensingTask (void *p_arg)
     //Dereference controller
     command_controller * ctrl = (command_controller *)p_arg;
 
-    recipe * recipe = ctrl->current_recipe;
+    recipe * my_recipe = ctrl->current_recipe;
     ctrl->state = DISPENSING;
 
     //Dispense liquid
@@ -38,7 +38,7 @@ void CommandProcessingTask(void *p_arg)
     while(true)
     {
         //Use I2C to read new command from the PROWF
-        read((void *)&command, 1);
+        read((void *)&command, sizeof(command_t));
         command_handler(ctrl, command);
     }
 }
