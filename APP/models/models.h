@@ -1,23 +1,15 @@
 #ifndef MODELS_H
 #define MODELS_H
-typedef struct ingredient
+typedef struct dispensing_ingredient
 {
-    int id;
     short amount;
-    short order;
-} ingredient;
+    unsigned char order;
+} dispensing_ingredient;
 
 typedef struct recipe
 {
-    ingredient ingredients[3];
+    ingredient dispensing_ingredient[3];
     unsigned char ordered;
-    unsigned char ingredient_count;
 } recipe;
-
-typedef struct canister
-{
-    int canister_id;
-    ingredient * ingredient;
-} canister;
 
 #endif //MODELS_H

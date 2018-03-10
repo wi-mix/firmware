@@ -8,9 +8,16 @@
 #define DISPENSE_TASK_PRIO 5
 typedef enum dispensing_status
 {
-    ACCEPTING,
-    DISPENSING
+    DISPENSING,
+    ACCEPTING
 } dispensing_status;
+
+typedef enum command_t
+{
+    READ_LEVELS,
+    DISPENSE_REQUEST,
+    DISPENSE
+} command_t;
 
 typedef struct command_controller command_controller;
 struct command_controller
@@ -31,5 +38,9 @@ void  DispensingTask (void *p_arg);
 void dispense(command_controller * controller, recipe * my_recipe);
 
 void command_handler(command_controller * controller);
+
+void read_levels(void);
+
+void get_recipe(recipe * my_recipe);
 
 #endif //__CMD_CONTROL_H
