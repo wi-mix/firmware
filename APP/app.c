@@ -109,9 +109,26 @@
 #define HEX5_ADD 0x00000150
 #define HEX5_BASE FPGA_TO_HPS_LW_ADDR(HEX5_ADD)
 
-#define APP_TASK_PRIO 5
+// PWM Locations
+#define PWM1_ADD 0x00000200
+#define PWM1_BASE FPGA_TO_HPS_LW_ADDR(PWM1_ADD)
+#define PWM2_ADD 0x00000204
+#define PWM2_BASE FPGA_TO_HPS_LW_ADDR(PWM2_ADD)
+#define PWM3_ADD 0x00000208
+#define PWM3_BASE FPGA_TO_HPS_LW_ADDR(PWM3_ADD)
+#define PWM4_ADD 0x0000020C
+#define PWM4_BASE FPGA_TO_HPS_LW_ADDR(PWM4_ADD)
+
+// PWM Constants
+#define PWM_MAX 625000
+#define PWM_INC   6250
+
+#define APP_TASK_PRIO 	0
+#define ADC_TASK_PRIO 	1
+#define MOTOR_TASK_PRIO 2
+
 #define TASK_STACK_SIZE 4096
-#define ADC_TASK_PRIO 4
+
 
 /*
 *********************************************************************************************************
@@ -121,6 +138,7 @@
 
 CPU_STK AppTaskStartStk[TASK_STACK_SIZE];
 CPU_STK ADCTaskStartStk[TASK_STACK_SIZE];
+CPU_STK MotorTaskStartStk[TASK_STACK_SIZE];
 
 
 /*
@@ -131,6 +149,7 @@ CPU_STK ADCTaskStartStk[TASK_STACK_SIZE];
 
 static  void  AppTaskStart              (void        *p_arg);
 static  void  ADCTaskStart              (void        *p_arg);
+static  void  MotorTaskStart            (void        *p_arg);
 
 
 /*
@@ -200,6 +219,20 @@ int main ()
         ; /* Handle error. */
     }
 
+    os_err = OSTaskCreateExt((void (*)(void *)) MotorTaskStart,   /* Create the start task.                               */
+                             (void          * ) 0,
+                             (OS_STK        * )&MotorTaskStartStk[TASK_STACK_SIZE - 1],
+                             (INT8U           ) MOTOR_TASK_PRIO,
+                             (INT16U          ) MOTOR_TASK_PRIO,  // reuse prio for ID
+                             (OS_STK        * )&MotorTaskStartStk[0],
+                             (INT32U          ) TASK_STACK_SIZE,
+                             (void          * )0,
+                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+
+    if (os_err != OS_ERR_NONE) {
+        ; /* Handle error. */
+    }
+
     CPU_IntEn();
 
     OSStart();
@@ -240,34 +273,51 @@ float maxf = 0;
 static  void  AppTaskStart (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
-    uint8_t count = 0;
 
     for(;;) {
         OSTimeDlyHMSM(0, 0, 10, 000);
 
-        // BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
-    	/*
+        BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
+
         OSTimeDlyHMSM(0, 0, 0, 500);
         BSP_LED_On();
 
         OSTimeDlyHMSM(0, 0, 0, 500);
         BSP_LED_Off();
-
-        count += 1;
-        alt_write_word(LEDR_BASE, count);
-        */
     }
 
 }
 
 static  void  ADCTaskStart (void *p_arg) {
-	int32_t raw = (alt_read_word(ADC_CH1_BASE));
-
     for(;;) {
+    	uint32_t chan_num = 0; // 0x3FF & alt_read_word(SW_BASE);
+    	uint32_t channel = 0;
+
+    	switch(chan_num) {
+			case 0: channel = ADC_CH0; break;
+			case 1: channel = ADC_CH1; break;
+			case 2: channel = ADC_CH2; break;
+			case 3: channel = ADC_CH3; break;
+			case 4: channel = ADC_CH4; break;
+			case 5: channel = ADC_CH5; break;
+			case 6: channel = ADC_CH6; break;
+			case 7: channel = ADC_CH7; break;
+			default: channel = ADC_CH0; break;
+    	}
     	BSP_WatchDog_Reset();
-    	raw = (0xFFF & alt_read_word(ADC_CH1_BASE));
-    	printf("Raw: %d\n", raw);
+    	int32_t raw = (0xFFF & alt_read_word(channel));
+    	//printf("Channel %u: %d\n", chan_num, raw);
         OSTimeDlyHMSM(0, 0, 0, 100);
+    }
+
+}
+
+static void  MotorTaskStart (void *p_arg) {
+    for(;;) {
+    	uint32_t increment = 0x3FF & alt_read_word(SW_BASE);
+    	alt_write_word(PWM1_BASE, increment * PWM_INC);
+    	printf("PWM1: %d/%d\n", increment * PWM_INC, PWM_MAX);
+        OSTimeDlyHMSM(0, 0, 1, 0);
     }
 
 }
