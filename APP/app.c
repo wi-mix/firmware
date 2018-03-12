@@ -58,6 +58,10 @@
 #include  <socal.h>
 #include  <hwlib.h>
 
+#include "command_controller/command_controller.h"
+#include "models/models.h"
+#include <alt_i2c.h>
+
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
@@ -129,7 +133,6 @@
 
 #define TASK_STACK_SIZE 4096
 
-
 /*
 *********************************************************************************************************
 *                                       LOCAL GLOBAL VARIABLES
@@ -191,6 +194,8 @@ int main ()
     OSInit();
 
 
+
+
     os_err = OSTaskCreateExt((void (*)(void *)) AppTaskStart,   /* Create the start task.                               */
                              (void          * ) 0,
                              (OS_STK        * )&AppTaskStartStk[TASK_STACK_SIZE - 1],
@@ -238,6 +243,7 @@ int main ()
     OSStart();
 
 }
+
 
 
 /*
