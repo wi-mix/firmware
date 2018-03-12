@@ -8,13 +8,15 @@
 #include "../HWLIBS/alt_i2c.h"
 #include "../models/models.h"
 #include "i2c_driver.h"
+#include "bsp.h"
+#include "bsp_int.h"
 
 static ALT_I2C_DEV_t * i2c2_device;
 #define HALF_FULL 32
 #define RX_BUFFER_SIZE 256
 static uint8_t I2C2_Internal_RX_Buffer[RX_BUFFER_SIZE];
 static uint32_t rx_write_pos = 0;
-static uint32_t rx_read_pos 0;
+static uint32_t rx_read_pos = 0;
 
 OS_EVENT * read_semaphore;
 OS_EVENT * write_semaphore;
@@ -73,7 +75,7 @@ void I2C2_ISR_Handler(CPU_INT32U cpu_id) {
         for(int i = 0; i < rx_count; i++)
         {
             alt_i2c_slave_receive(i2c2_device, &(I2C2_Internal_RX_Buffer[rx_write_pos]));
-            rx_write_pos++ % RX_BUFFER_SIZE;
+            rx_write_pos = (rx_write_pos + 1) % RX_BUFFER_SIZE;
         }
     }
     else if(mask & ALT_I2C_STATUS_STOP_DET)
@@ -82,7 +84,7 @@ void I2C2_ISR_Handler(CPU_INT32U cpu_id) {
         for(int i = 0; i < rx_count; i++)
         {
             alt_i2c_slave_receive(i2c2_device, &(I2C2_Internal_RX_Buffer[rx_write_pos]));
-            rx_write_pos++ % RX_BUFFER_SIZE;
+            rx_write_pos = (rx_write_pos + 1) % RX_BUFFER_SIZE;
         }
         if(rx_count > 0)
         {
@@ -104,14 +106,17 @@ void I2C2_ISR_Handler(CPU_INT32U cpu_id) {
 
 ALT_STATUS_CODE write(void * data, size_t size)
 {
-    OSSemPend(write_semaphore);
+	uint8_t err;
+    OSSemPend(write_semaphore, 0, &err);
     alt_i2c_slave_bulk_transmit(i2c2_device, data, size);
-    OSSemPend(write_complete_semaphore);
+    OSSemPend(write_complete_semaphore, 0, &err);
+    return 0;
 }
 
 void read(void * data, size_t size)
 {
-    OSSemPend(read_semaphore);
+	uint8_t err;
+    OSSemPend(read_semaphore, 0, &err);
     while(size > 0)
     {
         memcpy(data, &I2C2_Internal_RX_Buffer[rx_read_pos], 1);
@@ -120,3 +125,4 @@ void read(void * data, size_t size)
         size--;
     }
 }
+

@@ -29,7 +29,7 @@ struct command_controller
     ALT_I2C_DEV_t command_i2c;
 };
 
-command_controller * initialize_cmd_ctrl(command_controller * controller);
+command_controller * initialize_cmd_ctrl();
 
 //Task prototype for dispensing
 //Takes a command_controller pointer
@@ -37,7 +37,7 @@ void  DispensingTask (void *p_arg);
 
 void dispense(command_controller * controller, recipe * my_recipe);
 
-void command_handler(command_controller * controller);
+void command_handler(command_controller * controller, command_t command);
 
 void read_levels(void);
 

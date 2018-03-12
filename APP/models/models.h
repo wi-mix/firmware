@@ -8,7 +8,7 @@ typedef struct dispensing_ingredient
 
 typedef struct recipe
 {
-    ingredient dispensing_ingredient[3];
+	dispensing_ingredient ingredient[3];
     unsigned char ordered;
 } recipe;
 

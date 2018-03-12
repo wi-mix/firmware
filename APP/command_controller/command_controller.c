@@ -45,7 +45,7 @@ void CommandProcessingTask(void *p_arg)
 
 void command_handler(command_controller * controller, command_t command)
 {
-    my_recipe = (recipe *)malloc(sizeof(recipe));
+    recipe* my_recipe = (recipe *)malloc(sizeof(recipe));
     switch(command)
     {
         case READ_LEVELS:
@@ -55,7 +55,7 @@ void command_handler(command_controller * controller, command_t command)
             write((void *)&(controller->state), sizeof(dispensing_status));
             break;
         case DISPENSE:
-            get_recipe(controller, my_recipe);
+            get_recipe(my_recipe);
             dispense(controller, my_recipe);
             break;
         default:
@@ -86,10 +86,10 @@ void dispense(command_controller * controller, recipe * my_recipe)
 
 command_controller * initialize_cmd_ctrl()
 {
-    cmd_controller->state = ACCEPTING;
-    cmd_controller->dispense = &dispense;
-    cmd_controller->command_handler = &command_handler;
+    cmd_controller.state = ACCEPTING;
+    cmd_controller.dispense = &dispense;
+    cmd_controller.command_handler = &command_handler;
     cmd_queue = OSQCreate(cmd_msg_queue, CMD_QUEUE_SIZE);
-    init_I2C2(&(cmd_controller->command_i2c));
+    init_I2C2(&(cmd_controller.command_i2c));
     return &cmd_controller;
 }
