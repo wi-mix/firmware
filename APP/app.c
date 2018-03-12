@@ -281,8 +281,6 @@ static  void  AppTaskStart (void *p_arg) {
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
 
     for(;;) {
-        OSTimeDlyHMSM(0, 0, 10, 000);
-
         BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
 
         OSTimeDlyHMSM(0, 0, 0, 500);
@@ -296,23 +294,25 @@ static  void  AppTaskStart (void *p_arg) {
 
 static  void  ADCTaskStart (void *p_arg) {
     for(;;) {
-    	uint32_t chan_num = 0; // 0x3FF & alt_read_word(SW_BASE);
-    	uint32_t channel = 0;
+    	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
+    	uint32_t chan_num = 0x0FF & cmd;
+    	void* channel = 0;
 
     	switch(chan_num) {
-			case 0: channel = ADC_CH0; break;
-			case 1: channel = ADC_CH1; break;
-			case 2: channel = ADC_CH2; break;
-			case 3: channel = ADC_CH3; break;
-			case 4: channel = ADC_CH4; break;
-			case 5: channel = ADC_CH5; break;
-			case 6: channel = ADC_CH6; break;
-			case 7: channel = ADC_CH7; break;
-			default: channel = ADC_CH0; break;
+			case 0: channel = ADC_CH0_BASE; break;
+			case 1: channel = ADC_CH1_BASE; break;
+			case 2: channel = ADC_CH2_BASE; break;
+			case 3: channel = ADC_CH3_BASE; break;
+			case 4: channel = ADC_CH4_BASE; break;
+			case 5: channel = ADC_CH5_BASE; break;
+			case 6: channel = ADC_CH6_BASE; break;
+			case 7: channel = ADC_CH7_BASE; break;
+			default: channel = ADC_CH0_BASE; break;
     	}
-    	BSP_WatchDog_Reset();
-    	int32_t raw = (0xFFF & alt_read_word(channel));
-    	//printf("Channel %u: %d\n", chan_num, raw);
+    	if((cmd & 0x300) == 0){
+			int32_t raw = (0xFFF & alt_read_word(channel));
+			printf("Channel %u: %d\n", chan_num, raw);
+    	}
         OSTimeDlyHMSM(0, 0, 0, 100);
     }
 
@@ -320,9 +320,21 @@ static  void  ADCTaskStart (void *p_arg) {
 
 static void  MotorTaskStart (void *p_arg) {
     for(;;) {
-    	uint32_t increment = 0x3FF & alt_read_word(SW_BASE);
-    	alt_write_word(PWM1_BASE, increment * PWM_INC);
-    	printf("PWM1: %d/%d\n", increment * PWM_INC, PWM_MAX);
+    	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
+    	uint32_t motor_num = (cmd & 0x300) >> 8;
+    	void* motor = PWM1_BASE;
+    	uint32_t increment = 0x0FF & cmd;
+    	if(motor_num != 0){
+    		switch(motor_num){
+				case 1: motor = PWM1_BASE; break;
+				case 2: motor = PWM2_BASE; break;
+				case 3: motor = PWM3_BASE; break;
+				case 4: motor = PWM4_BASE; break;
+				default: motor = PWM1_BASE; break;
+    		}
+    		alt_write_word(motor, increment * PWM_INC);
+    		printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
+    	}
         OSTimeDlyHMSM(0, 0, 1, 0);
     }
 
