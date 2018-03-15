@@ -136,7 +136,7 @@ CPU_STK ADCTaskStartStk[TASK_STACK_SIZE];
 static  void  AppTaskStart              (void        *p_arg);
 static  void  ADCTaskStart              (void        *p_arg);
 
-
+command_controller wimix_controller;
 /*
 *********************************************************************************************************
 *                                               main()
@@ -178,6 +178,7 @@ int main ()
 
 
 
+	initialize_cmd_ctrl(&wimix_controller);
     os_err = OSTaskCreateExt((void (*)(void *)) AppTaskStart,   /* Create the start task.                               */
                              (void          * ) 0,
                              (OS_STK        * )&AppTaskStartStk[TASK_STACK_SIZE - 1],
@@ -247,9 +248,10 @@ float maxf = 0;
 static  void  AppTaskStart (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
+
     uint8_t count = 0;
     for(;;) {
-        OSTimeDlyHMSM(0, 0, 10, 000);
+        OSTimeDlyHMSM(0, 0, 0, 500);
 
     }
 
