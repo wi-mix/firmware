@@ -154,7 +154,7 @@ static  void  AppTaskStart              (void        *p_arg);
 static  void  ADCTaskStart              (void        *p_arg);
 static  void  MotorTaskStart            (void        *p_arg);
 
-command_controller wimix_controller;
+command_controller * wimix_controller;
 /*
 *********************************************************************************************************
 *                                               main()
@@ -196,7 +196,7 @@ int main ()
 
 
 
-	initialize_cmd_ctrl(&wimix_controller);
+
     os_err = OSTaskCreateExt((void (*)(void *)) AppTaskStart,   /* Create the start task.                               */
                              (void          * ) 0,
                              (OS_STK        * )&AppTaskStartStk[TASK_STACK_SIZE - 1],
@@ -238,6 +238,8 @@ int main ()
     if (os_err != OS_ERR_NONE) {
         ; /* Handle error. */
     }
+
+    wimix_controller = initialize_cmd_ctrl();
 
     CPU_IntEn();
 
@@ -312,7 +314,7 @@ static  void  ADCTaskStart (void *p_arg) {
     	}
     	if((cmd & 0x300) == 0){
 			int32_t raw = (0xFFF & alt_read_word(channel));
-			printf("Channel %u: %d\n", chan_num, raw);
+			//printf("Channel %u: %d\n", chan_num, raw);
     	}
         OSTimeDlyHMSM(0, 0, 0, 100);
     }
@@ -334,7 +336,7 @@ static void  MotorTaskStart (void *p_arg) {
 				default: motor = PWM1_BASE; break;
     		}
     		alt_write_word(motor, increment * PWM_INC);
-    		printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
+    		//printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
     	}
         OSTimeDlyHMSM(0, 0, 1, 0);
     }

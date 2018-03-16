@@ -24,33 +24,40 @@ OS_EVENT * write_complete_semaphore;
 
 void init_I2C2(ALT_I2C_DEV_t * device)
 {
-
+	ALT_STATUS_CODE err;
     read_semaphore = OSSemCreate(0);
     write_semaphore = OSSemCreate(0);
     write_complete_semaphore = OSSemCreate(0);
     
     i2c2_device = device;
-    alt_i2c_init(ALT_I2C_I2C2, i2c2_device);
+    err = alt_i2c_init(ALT_I2C_I2C2, i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error initializing i2c2\r\n");
+    err =  alt_i2c_reset(i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error resetting i2c2\r\n");
     
-    alt_i2c_op_mode_set(i2c2_device, ALT_I2C_MODE_SLAVE);
-
     ALT_I2C_SLAVE_CONFIG_t slave_config = { .addr_mode = ALT_I2C_ADDR_MODE_7_BIT,
                                             .addr = 17,
-                                            .nack_enable = false};
+                                            .nack_enable = true};
     
-    alt_i2c_slave_config_set(i2c2_device, &slave_config);
-
-    alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
-    alt_i2c_int_enable(i2c2_device, 
+    err = alt_i2c_slave_config_set(i2c2_device, &slave_config);
+    if(err != ALT_E_SUCCESS) printf("Error configuring slave device\r\n");
+    err = alt_i2c_op_mode_set(i2c2_device, ALT_I2C_MODE_SLAVE);
+        if(err != ALT_E_SUCCESS) printf("Error setting i2c2 mode\r\n");
+    err = alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
+    if(err != ALT_E_SUCCESS) printf("Error clearing interrupts\r\n");
+    err = alt_i2c_int_enable(i2c2_device,
                         ALT_I2C_STATUS_STOP_DET | 
                         ALT_I2C_STATUS_RX_DONE | 
                         ALT_I2C_STATUS_RX_FULL |
-                        ALT_I2C_STATUS_RD_REQ);
+                        ALT_I2C_STATUS_RD_REQ |
+						ALT_I2C_STATUS_START_DET);
+    if(err != ALT_E_SUCCESS) printf("Error enabling interrupts\n");
     init_I2C2_interrupt();
 
-    alt_i2c_rx_fifo_threshold_set(i2c2_device, HALF_FULL);
-
-    alt_i2c_enable(i2c2_device);
+    err = alt_i2c_rx_fifo_threshold_set(i2c2_device, HALF_FULL);
+    if(err != ALT_E_SUCCESS) printf("Error setting fifo\r\n");
+    err =alt_i2c_enable(i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error enabling device\r\n");
 }
 
 void init_I2C2_interrupt(void)
@@ -60,6 +67,7 @@ void init_I2C2_interrupt(void)
                 DEF_BIT_00,	    // cpu target list
                 I2C2_ISR_Handler  // ISR
                 );
+    BSP_IntSrcEn(I2C2_INTERRUPT_VECTOR);
 }
 
 void I2C2_ISR_Handler(CPU_INT32U cpu_id) {
