@@ -48,6 +48,7 @@ void CommandProcessingTask(void *p_arg)
         printf("Processing command: %d!\r\n", command);
         command_handler(ctrl, command);*/
     	test_target_device();
+    	test_master_send();
     	 OSTimeDlyHMSM(0, 0, 1, 0);
     }
 }
