@@ -47,8 +47,7 @@ void CommandProcessingTask(void *p_arg)
         /*read((void *)&command, sizeof(command_t));
         printf("Processing command: %d!\r\n", command);
         command_handler(ctrl, command);*/
-    	alt_i2c_rx_fifo_level_get(&(ctrl->command_i2c), &entries);
-    	printf("There are %d entries in the receive FIFO\r\n");
+    	test_target_device();
     	 OSTimeDlyHMSM(0, 0, 1, 0);
     }
 }
@@ -102,7 +101,8 @@ command_controller * initialize_cmd_ctrl()
     cmd_controller.dispense = &dispense;
     cmd_controller.command_handler = &command_handler;
     cmd_queue = OSQCreate(cmd_msg_queue, CMD_QUEUE_SIZE);
-    init_I2C2(&(cmd_controller.command_i2c));
+    //init_I2C2(&(cmd_controller.command_i2c));
+    test_I2C2_as_master(&(cmd_controller.command_i2c));
     printf("Initialized I2C2\r\n");
     os_err = OSTaskCreateExt((void (*)(void *)) CommandProcessingTask,   /* Create the start task.                               */
                                  (void          * ) 0,

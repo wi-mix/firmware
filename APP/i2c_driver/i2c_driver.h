@@ -9,6 +9,9 @@
 void init_I2C2_interrupt(void);
 
 void init_I2C2(ALT_I2C_DEV_t * device);
+void test_I2C2_as_master(ALT_I2C_DEV_t * device);
+void test_master_send();
+void test_target_device();
 
 void I2C2_ISR_Handler(CPU_INT32U cpu_id);
 

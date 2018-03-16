@@ -60,6 +60,65 @@ void init_I2C2(ALT_I2C_DEV_t * device)
     if(err != ALT_E_SUCCESS) printf("Error enabling device\r\n");
 }
 
+void test_I2C2_as_master(ALT_I2C_DEV_t * device)
+{
+    ALT_STATUS_CODE err;
+    read_semaphore = OSSemCreate(0);
+    write_semaphore = OSSemCreate(0);
+    write_complete_semaphore = OSSemCreate(0);
+    
+    i2c2_device = device;
+    err = alt_i2c_init(ALT_I2C_I2C2, i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error initializing i2c2\r\n");
+    err =  alt_i2c_reset(i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error resetting i2c2\r\n");
+    
+    ALT_I2C_MASTER_CONFIG_t master_config = {
+        .addr_mode = ALT_I2C_ADDR_MODE_7_BIT,
+        .restart_enable = true,
+        .speed_mode = ALT_I2C_SPEED_STANDARD,
+        .ss_scl_hcnt = 1,
+        .ss_scl_lcnt = 1,
+        .fs_spklen = 2
+    };
+
+    
+    err = alt_i2c_master_config_set(i2c2_device, &master_config);
+    if(err != ALT_E_SUCCESS) printf("Error configuring master device\r\n");
+    err = alt_i2c_op_mode_set(i2c2_device, ALT_I2C_MODE_MASTER);
+        if(err != ALT_E_SUCCESS) printf("Error setting i2c2 mode\r\n");
+    err = alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
+    if(err != ALT_E_SUCCESS) printf("Error clearing interrupts\r\n");
+    err = alt_i2c_int_enable(i2c2_device,
+                        ALT_I2C_STATUS_STOP_DET | 
+                        ALT_I2C_STATUS_RX_DONE | 
+                        ALT_I2C_STATUS_RX_FULL |
+                        ALT_I2C_STATUS_RD_REQ |
+						ALT_I2C_STATUS_START_DET);
+    if(err != ALT_E_SUCCESS) printf("Error enabling interrupts\n");
+    init_I2C2_interrupt();
+
+    err = alt_i2c_rx_fifo_threshold_set(i2c2_device, HALF_FULL);
+    if(err != ALT_E_SUCCESS) printf("Error setting fifo\r\n");
+    err =alt_i2c_enable(i2c2_device);
+    if(err != ALT_E_SUCCESS) printf("Error enabling device\r\n");
+
+
+}
+
+void test_target_device()
+{
+	ALT_STATUS_CODE err;
+	err = alt_i2c_master_target_set(i2c2_device, 17);
+	if(err != ALT_E_SUCCESS) printf("Error targeting device 17\r\n");
+}
+
+void test_master_send()
+{
+	int test = 5;
+	alt_i2c_master_transmit(i2c2_device, (void *)(&test), 4, 1, 1);
+}
+
 void init_I2C2_interrupt(void)
 {
     BSP_IntVectSet(I2C2_INTERRUPT_VECTOR,   // 192 is interrupt source for i2c2
