@@ -62,6 +62,12 @@
 #include "models/models.h"
 #include <alt_i2c.h>
 
+#include "basic_io.h"
+#include "adc.h"
+#include "seven_seg.h"
+#include "pwm.h"
+#include "timer.h"
+
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
@@ -70,66 +76,9 @@
 
 #define FPGA_TO_HPS_LW_ADDR(base)  ((void *) (((char *)  (ALT_LWFPGASLVS_ADDR))+ (base)))
 
-#define LEDR_ADD 0x00000000
-#define LEDR_BASE FPGA_TO_HPS_LW_ADDR(LEDR_ADD)
-
-#define SW_ADD 0x00001100
-#define SW_BASE FPGA_TO_HPS_LW_ADDR(SW_ADD)
-
-// ADC Read Addresses
-#define ADC_CH0 0x00001200
-#define ADC_CH0_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH0)
-#define ADC_CH1 0x00001204
-#define ADC_CH1_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH1)
-#define ADC_CH2 0x00001208
-#define ADC_CH2_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH2)
-#define ADC_CH3 0x0000120C
-#define ADC_CH3_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH3)
-#define ADC_CH4 0x00001210
-#define ADC_CH4_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH4)
-#define ADC_CH5 0x00001214
-#define ADC_CH5_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH5)
-#define ADC_CH6 0x00001218
-#define ADC_CH6_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH6)
-#define ADC_CH7 0x0000121C
-#define ADC_CH7_BASE FPGA_TO_HPS_LW_ADDR(ADC_CH7)
-// ADC Write Addresses
-#define ADC_UP 0x00001200
-#define ADC_UP_BASE FPGA_TO_HPS_LW_ADDR(ADC_UP)
-#define ADC_AUTO 0x00001204
-#define ADC_AUTO_BASE FPGA_TO_HPS_LW_ADDR(ADC_AUTO)
-
-// Hex Locations
-#define HEX0_ADD 0x00000100
-#define HEX0_BASE FPGA_TO_HPS_LW_ADDR(HEX0_ADD)
-#define HEX1_ADD 0x00000110
-#define HEX1_BASE FPGA_TO_HPS_LW_ADDR(HEX1_ADD)
-#define HEX2_ADD 0x00000120
-#define HEX2_BASE FPGA_TO_HPS_LW_ADDR(HEX2_ADD)
-#define HEX3_ADD 0x00000130
-#define HEX3_BASE FPGA_TO_HPS_LW_ADDR(HEX3_ADD)
-#define HEX4_ADD 0x00000140
-#define HEX4_BASE FPGA_TO_HPS_LW_ADDR(HEX4_ADD)
-#define HEX5_ADD 0x00000150
-#define HEX5_BASE FPGA_TO_HPS_LW_ADDR(HEX5_ADD)
-
-// PWM Locations
-#define PWM1_ADD 0x00000200
-#define PWM1_BASE FPGA_TO_HPS_LW_ADDR(PWM1_ADD)
-#define PWM2_ADD 0x00000204
-#define PWM2_BASE FPGA_TO_HPS_LW_ADDR(PWM2_ADD)
-#define PWM3_ADD 0x00000208
-#define PWM3_BASE FPGA_TO_HPS_LW_ADDR(PWM3_ADD)
-#define PWM4_ADD 0x0000020C
-#define PWM4_BASE FPGA_TO_HPS_LW_ADDR(PWM4_ADD)
-
-// PWM Constants
-#define PWM_MAX 625000
-#define PWM_INC   6250
-
-#define APP_TASK_PRIO 	0
-#define ADC_TASK_PRIO 	1
-#define MOTOR_TASK_PRIO 2
+#define ADC_TASK_PRIO 		2
+#define MOTOR_TASK_PRIO 	3
+#define WATCHDOG_TASK_PRIO 	1
 
 #define TASK_STACK_SIZE 4096
 
@@ -139,9 +88,9 @@
 *********************************************************************************************************
 */
 
-CPU_STK AppTaskStartStk[TASK_STACK_SIZE];
-CPU_STK ADCTaskStartStk[TASK_STACK_SIZE];
-CPU_STK MotorTaskStartStk[TASK_STACK_SIZE];
+CPU_STK WatchdogTaskStk[TASK_STACK_SIZE];
+CPU_STK ADCTaskStk[TASK_STACK_SIZE];
+CPU_STK MotorTaskStk[TASK_STACK_SIZE];
 
 
 /*
@@ -150,9 +99,15 @@ CPU_STK MotorTaskStartStk[TASK_STACK_SIZE];
 *********************************************************************************************************
 */
 
-static  void  AppTaskStart              (void        *p_arg);
-static  void  ADCTaskStart              (void        *p_arg);
-static  void  MotorTaskStart            (void        *p_arg);
+static  void  WatchdogTask(void *p_arg);
+static  void  ADCTask(void *p_arg);
+static  void  MotorTask(void *p_arg);
+
+void ADCTaskInit(INT8U task_priority);
+void MotorTaskInit(INT8U task_priority);
+void WatchdogTaskInit(INT8U task_priority);
+
+void Motor_TimerISR_Handler(CPU_INT32U cpu_id);
 
 command_controller wimix_controller;
 /*
@@ -172,8 +127,6 @@ command_controller wimix_controller;
 
 int main ()
 {
-    INT8U os_err;
-
     BSP_WatchDog_Reset();                                       /* Reset the watchdog as soon as possible.              */
 
                                                                 /* Scatter loading is complete. Now the caches can be activated.*/
@@ -182,7 +135,6 @@ int main ()
     BSP_CachesEn();                                             /* Enable L1 I&D caches + L2 unified cache.             */
 
 
-    alt_write_word(ADC_AUTO_BASE, 1);
 
     CPU_Init();
 
@@ -190,54 +142,19 @@ int main ()
 
     BSP_Init();
 
+    ADCInit();
 
     OSInit();
 
+    InitHPSTimerInterrupt(250000, Motor_TimerISR_Handler);
 
 
 
-	initialize_cmd_ctrl(&wimix_controller);
-    os_err = OSTaskCreateExt((void (*)(void *)) AppTaskStart,   /* Create the start task.                               */
-                             (void          * ) 0,
-                             (OS_STK        * )&AppTaskStartStk[TASK_STACK_SIZE - 1],
-                             (INT8U           ) APP_TASK_PRIO,
-                             (INT16U          ) APP_TASK_PRIO,  // reuse prio for ID
-                             (OS_STK        * )&AppTaskStartStk[0],
-                             (INT32U          ) TASK_STACK_SIZE,
-                             (void          * )0,
-                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+    // ADCTaskInit(ADC_TASK_PRIO);
+    // MotorTaskInit(MOTOR_TASK_PRIO);
 
-    if (os_err != OS_ERR_NONE) {
-        ; /* Handle error. */
-    }
 
-    os_err = OSTaskCreateExt((void (*)(void *)) ADCTaskStart,   /* Create the start task.                               */
-                             (void          * ) 0,
-                             (OS_STK        * )&ADCTaskStartStk[TASK_STACK_SIZE - 1],
-                             (INT8U           ) ADC_TASK_PRIO,
-                             (INT16U          ) ADC_TASK_PRIO,  // reuse prio for ID
-                             (OS_STK        * )&ADCTaskStartStk[0],
-                             (INT32U          ) TASK_STACK_SIZE,
-                             (void          * )0,
-                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
-
-    if (os_err != OS_ERR_NONE) {
-        ; /* Handle error. */
-    }
-
-    os_err = OSTaskCreateExt((void (*)(void *)) MotorTaskStart,   /* Create the start task.                               */
-                             (void          * ) 0,
-                             (OS_STK        * )&MotorTaskStartStk[TASK_STACK_SIZE - 1],
-                             (INT8U           ) MOTOR_TASK_PRIO,
-                             (INT16U          ) MOTOR_TASK_PRIO,  // reuse prio for ID
-                             (OS_STK        * )&MotorTaskStartStk[0],
-                             (INT32U          ) TASK_STACK_SIZE,
-                             (void          * )0,
-                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
-
-    if (os_err != OS_ERR_NONE) {
-        ; /* Handle error. */
-    }
+    WatchdogTaskInit(WATCHDOG_TASK_PRIO);
 
     CPU_IntEn();
 
@@ -246,7 +163,23 @@ int main ()
 }
 
 
+static void WatchdogTaskInit(INT8U task_priority){
+    INT8U os_err;
 
+    os_err = OSTaskCreateExt((void (*)(void *)) WatchdogTask,   /* Create the start task.                               */
+                             (void          * ) 0,
+                             (OS_STK        * )&WatchdogTaskStk[TASK_STACK_SIZE - 1],
+                             (INT8U           ) task_priority,
+                             (INT16U          ) task_priority,  // reuse prio for ID
+                             (OS_STK        * )&WatchdogTaskStk[0],
+                             (INT32U          ) TASK_STACK_SIZE,
+                             (void          * )0,
+                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+
+    if (os_err != OS_ERR_NONE) {
+        ; /* Handle error. */
+    }
+}
 /*
 *********************************************************************************************************
 *                                           App_TaskStart()
@@ -262,22 +195,7 @@ int main ()
 * Notes       : (1) The ticker MUST be initialised AFTER multitasking has started.
 *********************************************************************************************************
 */
-
-void display7Seg(uint8_t top, uint16_t bottom){
-    alt_write_word(HEX0_BASE, bottom);
-    alt_write_word(HEX1_BASE, bottom>>4);
-    alt_write_word(HEX2_BASE, bottom>>8);
-    alt_write_word(HEX3_BASE, bottom>>12);
-    alt_write_word(HEX4_BASE, top);
-    alt_write_word(HEX5_BASE, top>>4);
-}
-
-int32_t min = 0;
-int32_t max = 0;
-float minf = 0;
-float maxf = 0;
-
-static  void  AppTaskStart (void *p_arg) {
+static  void  WatchdogTask (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
 
@@ -293,7 +211,25 @@ static  void  AppTaskStart (void *p_arg) {
 
 }
 
-static  void  ADCTaskStart (void *p_arg) {
+void ADCTaskInit(INT8U task_priority){
+    INT8U os_err;
+
+    os_err = OSTaskCreateExt((void (*)(void *)) ADCTask,   /* Create the start task.                               */
+                             (void          * ) 0,
+                             (OS_STK        * )&ADCTaskStk[TASK_STACK_SIZE - 1],
+                             (INT8U           ) task_priority,
+                             (INT16U          ) task_priority,  // reuse prio for ID
+                             (OS_STK        * )&ADCTaskStk[0],
+                             (INT32U          ) TASK_STACK_SIZE,
+                             (void          * )0,
+                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+
+    if (os_err != OS_ERR_NONE) {
+        printf("Unable to start ADC Task"); /* Handle error. */
+    }
+}
+
+static void ADCTask(void *p_arg) {
     for(;;) {
     	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
     	uint32_t chan_num = 0x0FF & cmd;
@@ -314,12 +250,31 @@ static  void  ADCTaskStart (void *p_arg) {
 			int32_t raw = (0xFFF & alt_read_word(channel));
 			printf("Channel %u: %d\n", chan_num, raw);
     	}
-        OSTimeDlyHMSM(0, 0, 0, 100);
+
+        OSTimeDlyHMSM(0, 0, 10, 0);
     }
 
 }
 
-static void  MotorTaskStart (void *p_arg) {
+void MotorTaskInit(INT8U task_priority){
+    INT8U os_err;
+
+    os_err = OSTaskCreateExt((void (*)(void *)) MotorTask,   /* Create the start task.                               */
+                             (void          * ) 0,
+                             (OS_STK        * )&MotorTaskStk[TASK_STACK_SIZE - 1],
+                             (INT8U           ) task_priority,
+                             (INT16U          ) task_priority,  // reuse prio for ID
+                             (OS_STK        * )&MotorTaskStk[0],
+                             (INT32U          ) TASK_STACK_SIZE,
+                             (void          * )0,
+                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+
+    if (os_err != OS_ERR_NONE) {
+        printf("Unable to start Motor Task"); /* Handle error. */
+    }
+}
+
+static void  MotorTask(void *p_arg) {
     for(;;) {
     	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
     	uint32_t motor_num = (cmd & 0x300) >> 8;
@@ -338,5 +293,42 @@ static void  MotorTaskStart (void *p_arg) {
     	}
         OSTimeDlyHMSM(0, 0, 1, 0);
     }
+}
 
+
+
+#define MOTOR_TEST_LENGTH 5
+#define MOTOR_MAX_TICKS MOTOR_TEST_LENGTH * 100
+#define ISR_MOTOR PWM1_BASE
+#define MOTOR_SPEED PWM_MAX - PWM_INC
+
+bool motor_running = false;
+bool motor_ran = false;
+uint32_t motor_runtime = 0;
+
+void Motor_TimerISR_Handler(CPU_INT32U cpu_id) {
+	// Do stuff
+	if(motor_running == true){
+		if(motor_runtime < MOTOR_MAX_TICKS){
+			motor_runtime++;
+		} else {
+			motor_running = false;
+    		alt_write_word(ISR_MOTOR, 0);
+    		motor_runtime = 0;
+		}
+	} else {
+		sw_read();
+		int8_t toggle = sw_get_bit_val(9);
+		if(toggle == 1 && motor_ran == false){
+			motor_running = true;
+			motor_ran = true;
+    		alt_write_word(ISR_MOTOR, MOTOR_SPEED);
+		} else if(toggle == 0 && motor_ran == true){
+			motor_ran = false;
+		}
+	}
+
+	// READ EOI Reg to clear interrupt (PAGE 23-10/23-11 of Cyclone V Hard Processor System
+	// Technical Reference Manual
+	volatile int32_t status = ARM_OSCL_TIMER_0_REG_EOI;
 }
