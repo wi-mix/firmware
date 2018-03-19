@@ -116,7 +116,9 @@ void test_target_device()
 void test_master_send()
 {
 	int test = 5;
-	alt_i2c_master_transmit(i2c2_device, (void *)(&test), 4, 1, 1);
+	ALT_STATUS_CODE err;
+	err = alt_i2c_master_transmit(i2c2_device, (void *)(&test), 4, 1, 1);
+    if(err != ALT_E_SUCCESS) printf("Error transmitting to device 17\r\n");
 }
 
 void init_I2C2_interrupt(void)
