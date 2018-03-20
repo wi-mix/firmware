@@ -35,5 +35,5 @@
 #define ADC_AUTO_BASE ADC_MAKE_BASE(ADC_AUTO)
 
 void ADCInit(void);
-
+int32_t* getADCChannel(int channel_num);
 #endif /* APP_ADC_H_ */

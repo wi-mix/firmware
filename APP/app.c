@@ -107,7 +107,22 @@ void ADCTaskInit(INT8U task_priority);
 void MotorTaskInit(INT8U task_priority);
 void WatchdogTaskInit(INT8U task_priority);
 
-void Motor_TimerISR_Handler(CPU_INT32U cpu_id);
+void MotorTimerISRHandler(CPU_INT32U cpu_id);
+
+int32_t calculateVolume(int32_t raw_value);
+int32_t getCurrentVolume(int32_t channel_num);
+
+#define ISR_MOTOR PWM1_BASE
+#define MOTOR_SPEED PWM_MAX - PWM_INC
+
+bool pouring = false;
+bool poured = true;
+
+#define REQUIRED_VOLUME 100
+int target_volume = 0;
+int tick = 0;
+bool paused = false;
+#define MAX_TICK 250
 
 command_controller wimix_controller;
 /*
@@ -146,11 +161,11 @@ int main ()
 
     OSInit();
 
-    InitHPSTimerInterrupt(250000, Motor_TimerISR_Handler);
+     InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
 
 
 
-    // ADCTaskInit(ADC_TASK_PRIO);
+    ADCTaskInit(ADC_TASK_PRIO);
     // MotorTaskInit(MOTOR_TASK_PRIO);
 
 
@@ -233,25 +248,14 @@ static void ADCTask(void *p_arg) {
     for(;;) {
     	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
     	uint32_t chan_num = 0x0FF & cmd;
-    	void* channel = 0;
-
-    	switch(chan_num) {
-			case 0: channel = ADC_CH0_BASE; break;
-			case 1: channel = ADC_CH1_BASE; break;
-			case 2: channel = ADC_CH2_BASE; break;
-			case 3: channel = ADC_CH3_BASE; break;
-			case 4: channel = ADC_CH4_BASE; break;
-			case 5: channel = ADC_CH5_BASE; break;
-			case 6: channel = ADC_CH6_BASE; break;
-			case 7: channel = ADC_CH7_BASE; break;
-			default: channel = ADC_CH0_BASE; break;
-    	}
+    	int32_t* channel = 0;
+    	channel = getADCChannel(chan_num);
     	if((cmd & 0x300) == 0){
 			int32_t raw = (0xFFF & alt_read_word(channel));
-			printf("Channel %u: %d\n", chan_num, raw);
+			printf("Channel %u, Raw: %d, Cur: %d, Target: %d\n", chan_num, raw, calculateVolume(raw), target_volume);
     	}
 
-        OSTimeDlyHMSM(0, 0, 10, 0);
+        OSTimeDlyHMSM(0, 0, 0, 100);
     }
 
 }
@@ -295,40 +299,52 @@ static void  MotorTask(void *p_arg) {
     }
 }
 
-
-
-#define MOTOR_TEST_LENGTH 5
-#define MOTOR_MAX_TICKS MOTOR_TEST_LENGTH * 100
-#define ISR_MOTOR PWM1_BASE
-#define MOTOR_SPEED PWM_MAX - PWM_INC
-
-bool motor_running = false;
-bool motor_ran = false;
-uint32_t motor_runtime = 0;
-
-void Motor_TimerISR_Handler(CPU_INT32U cpu_id) {
+void MotorTimerISRHandler(CPU_INT32U cpu_id) {
 	// Do stuff
-	if(motor_running == true){
-		if(motor_runtime < MOTOR_MAX_TICKS){
-			motor_runtime++;
-		} else {
-			motor_running = false;
+	if(pouring == true){
+		int32_t volume = getCurrentVolume(2);
+		if(paused){
     		alt_write_word(ISR_MOTOR, 0);
-    		motor_runtime = 0;
+		} else {
+    		alt_write_word(ISR_MOTOR, MOTOR_SPEED);
+		}
+		if(tick < MAX_TICK){
+			tick++;
+		} else {
+			tick = 0;
+			paused = !paused;
+		}
+		if(volume <= target_volume){
+			pouring = false;
+    		alt_write_word(ISR_MOTOR, 0);
 		}
 	} else {
 		sw_read();
 		int8_t toggle = sw_get_bit_val(9);
-		if(toggle == 1 && motor_ran == false){
-			motor_running = true;
-			motor_ran = true;
-    		alt_write_word(ISR_MOTOR, MOTOR_SPEED);
-		} else if(toggle == 0 && motor_ran == true){
-			motor_ran = false;
+		if(toggle == 1 && poured == false){
+			target_volume = getCurrentVolume(2) - REQUIRED_VOLUME;
+			pouring = true;
+			poured = true;
+			paused = false;
+			tick = 0;
+		} else if(toggle == 0 && poured == true){
+			poured = false;
 		}
 	}
 
 	// READ EOI Reg to clear interrupt (PAGE 23-10/23-11 of Cyclone V Hard Processor System
 	// Technical Reference Manual
 	volatile int32_t status = ARM_OSCL_TIMER_0_REG_EOI;
+}
+
+int32_t getCurrentVolume(int channel_num){
+	int32_t* channel = getADCChannel(channel_num);
+	int32_t raw = (0xFFF & alt_read_word(channel));
+	return calculateVolume(raw);
+}
+
+int32_t calculateVolume(int32_t raw_value){
+	float height = ((float)raw_value - 2289.2)/61.09;
+	float volume = 69.3977817178*height;
+	return (int32_t)volume;
 }
