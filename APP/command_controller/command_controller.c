@@ -42,14 +42,11 @@ void CommandProcessingTask(void *p_arg)
     printf("Command task started!\r\n");
     while(true)
     {
-    	uint32_t entries = 0;
         //Use I2C to read new command from the PROWF
-        /*read((void *)&command, sizeof(command_t));
+        read((void *)&command, sizeof(command_t));
         printf("Processing command: %d!\r\n", command);
-        command_handler(ctrl, command);*/
-    	test_target_device();
-    	test_master_send();
-    	 OSTimeDlyHMSM(0, 0, 1, 0);
+        command_handler(ctrl, command);
+    	OSTimeDlyHMSM(0, 0, 1, 0);
     }
 }
 
@@ -81,7 +78,7 @@ void get_recipe(recipe * my_recipe)
 void read_levels(void)
 {
     //Read levels from the dac into this array
-    uint16_t levels[3] = {0};
+    uint16_t levels[3] = {0xDEAD, 0xBEEF, 0xBABE};
 
     write((void *)&(levels[0]), sizeof(levels));
 }
@@ -102,8 +99,8 @@ command_controller * initialize_cmd_ctrl()
     cmd_controller.dispense = &dispense;
     cmd_controller.command_handler = &command_handler;
     cmd_queue = OSQCreate(cmd_msg_queue, CMD_QUEUE_SIZE);
-    //init_I2C2(&(cmd_controller.command_i2c));
-    test_I2C2_as_master(&(cmd_controller.command_i2c));
+    init_I2C2(&(cmd_controller.command_i2c));
+
     printf("Initialized I2C2\r\n");
     os_err = OSTaskCreateExt((void (*)(void *)) CommandProcessingTask,   /* Create the start task.                               */
                                  (void          * ) 0,
