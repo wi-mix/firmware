@@ -121,7 +121,7 @@ int tick = 0;
 bool paused = false;
 #define MAX_TICK 250
 
-command_controller wimix_controller;
+command_controller * wimix_controller;
 /*
 *********************************************************************************************************
 *                                               main()
@@ -160,11 +160,8 @@ int main ()
 
      InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
 
-
-
     ADCTaskInit(ADC_TASK_PRIO);
     // MotorTaskInit(MOTOR_TASK_PRIO);
-
 
     WatchdogTaskInit(WATCHDOG_TASK_PRIO);
 
@@ -191,6 +188,13 @@ static void WatchdogTaskInit(INT8U task_priority){
     if (os_err != OS_ERR_NONE) {
         ; /* Handle error. */
     }
+
+
+    wimix_controller = initialize_cmd_ctrl();
+
+    CPU_IntEn();
+
+    OSStart();
 }
 /*
 *********************************************************************************************************
@@ -250,6 +254,7 @@ static void ADCTask(void *p_arg) {
     	if((cmd & 0x300) == 0){
 			int32_t raw = (0xFFF & alt_read_word(channel));
 			printf("Channel %u, Raw: %d, Cur: %d, Target: %d\n", chan_num, raw, calculateVolume(raw, 3), target_volume);
+
     	}
 
         OSTimeDlyHMSM(0, 0, 0, 100);
@@ -290,7 +295,7 @@ static void  MotorTask(void *p_arg) {
 				default: motor = PWM1_BASE; break;
     		}
     		alt_write_word(motor, increment * PWM_INC);
-    		printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
+    		//printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
     	}
         OSTimeDlyHMSM(0, 0, 1, 0);
     }

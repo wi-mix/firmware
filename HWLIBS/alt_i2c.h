@@ -1921,6 +1921,8 @@ ALT_STATUS_CODE alt_i2c_rx_fifo_threshold_get(ALT_I2C_DEV_t *i2c_dev,
 ALT_STATUS_CODE alt_i2c_rx_fifo_threshold_set(ALT_I2C_DEV_t *i2c_dev,
                                               const uint8_t threshold);
 
+ALT_STATUS_CODE alt_i2c_sda_setup_time_set(ALT_I2C_DEV_t *i2c_dev,
+                                          const uint16_t setup_time);
 /*! @} */
 
 /******************************************************************************/

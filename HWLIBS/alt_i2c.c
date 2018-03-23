@@ -770,6 +770,40 @@ ALT_STATUS_CODE alt_i2c_sda_hold_time_set(ALT_I2C_DEV_t *i2c_dev,
     return status;
 }
 
+ALT_STATUS_CODE alt_i2c_sda_setup_time_set(ALT_I2C_DEV_t *i2c_dev,
+                                          const uint16_t setup_time)
+{
+    ALT_STATUS_CODE status = ALT_E_SUCCESS;
+    uint8_t already_enabled = 0;
+
+    if (alt_i2c_checking(i2c_dev) == ALT_E_FALSE)
+    {
+        return ALT_E_BAD_ARG;
+    }
+
+    already_enabled = (alt_i2c_is_enabled_helper(i2c_dev) == ALT_E_TRUE);
+
+    if (already_enabled)
+    {
+        /* Temporarily disable controller */
+        status = alt_i2c_disable(i2c_dev);
+        if (status != ALT_E_SUCCESS)
+        {
+            return status;
+        }
+    }
+
+    ((*((volatile uint32_t *) ((((void *) ((((char *) ((i2c_dev->location))) + 0x94)))))) = (((*((volatile uint32_t *) ((((void *) ((((char *) ((i2c_dev->location))) + 0x94))))))) & ~(0x0000ffff)) | (((((setup_time) << 0) & 0x0000ffff)) & (0x0000ffff)))));
+
+    if (already_enabled)
+    {
+        /* Re-enable controller */
+        status = alt_i2c_enable(i2c_dev);
+    }
+
+    return status;
+}
+
 #elif defined (soc_a10)
 /*
  * Get hold time (use during slave mode)
