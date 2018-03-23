@@ -36,4 +36,9 @@
 
 void ADCInit(void);
 int32_t* getADCChannel(int channel_num);
+
+int32_t getCurrentVolume(int8_t tape_num);
+int32_t calculateVolume(int32_t raw_value, int8_t tape_num);
+float calculateHeight(int32_t raw_value, int8_t tape_num);
+
 #endif /* APP_ADC_H_ */

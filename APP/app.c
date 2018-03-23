@@ -109,9 +109,6 @@ void WatchdogTaskInit(INT8U task_priority);
 
 void MotorTimerISRHandler(CPU_INT32U cpu_id);
 
-int32_t calculateVolume(int32_t raw_value);
-int32_t getCurrentVolume(int32_t channel_num);
-
 #define ISR_MOTOR PWM1_BASE
 #define MOTOR_SPEED PWM_MAX - PWM_INC
 
@@ -252,7 +249,7 @@ static void ADCTask(void *p_arg) {
     	channel = getADCChannel(chan_num);
     	if((cmd & 0x300) == 0){
 			int32_t raw = (0xFFF & alt_read_word(channel));
-			printf("Channel %u, Raw: %d, Cur: %d, Target: %d\n", chan_num, raw, calculateVolume(raw), target_volume);
+			printf("Channel %u, Raw: %d, Cur: %d, Target: %d\n", chan_num, raw, calculateVolume(raw, 3), target_volume);
     	}
 
         OSTimeDlyHMSM(0, 0, 0, 100);
@@ -335,16 +332,4 @@ void MotorTimerISRHandler(CPU_INT32U cpu_id) {
 	// READ EOI Reg to clear interrupt (PAGE 23-10/23-11 of Cyclone V Hard Processor System
 	// Technical Reference Manual
 	volatile int32_t status = ARM_OSCL_TIMER_0_REG_EOI;
-}
-
-int32_t getCurrentVolume(int channel_num){
-	int32_t* channel = getADCChannel(channel_num);
-	int32_t raw = (0xFFF & alt_read_word(channel));
-	return calculateVolume(raw);
-}
-
-int32_t calculateVolume(int32_t raw_value){
-	float height = ((float)raw_value - 2289.2)/61.09;
-	float volume = 69.3977817178*height;
-	return (int32_t)volume;
 }
