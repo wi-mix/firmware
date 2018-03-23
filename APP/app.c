@@ -158,7 +158,7 @@ int main ()
 
     OSInit();
 
-     InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
+    InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
 
     ADCTaskInit(ADC_TASK_PRIO);
     // MotorTaskInit(MOTOR_TASK_PRIO);
@@ -170,7 +170,15 @@ int main ()
     OSStart();
 
 }
+static void startDispense(dispensing_ingredient ingredient){
 
+}
+
+static void startDispense(dispensing_ingredient * ingredients){
+	for(int i=0; i<3;i++){
+		Start
+	}
+}
 
 static void WatchdogTaskInit(INT8U task_priority){
     INT8U os_err;

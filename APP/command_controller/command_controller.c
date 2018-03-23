@@ -24,7 +24,15 @@ void DispensingTask (void *p_arg)
     ctrl->state = DISPENSING;
 
     //Dispense liquid
-
+    // If they're ordered, the task will dispense each item in turn
+        if(my_recipe->ordered){
+        	startDispense(my_recipe->ingredient);
+        }// Otherwise spawn all threads simultaneously
+        else{
+        	for(int i =0; i<3;i++){
+        		startDispense(my_recipe.ingredient[i]);
+        	}
+        }
     //Update liquid levels
 
     //Unbusy
