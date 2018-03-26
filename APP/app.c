@@ -63,10 +63,11 @@
 #include <alt_i2c.h>
 
 #include "basic_io.h"
-#include "adc.h"
+#include "adc/adc.h"
 #include "seven_seg.h"
 #include "pwm.h"
 #include "timer.h"
+#include "models/models.h"
 
 
 // Compute absolute address of any slave component attached to lightweight bridge
@@ -101,7 +102,7 @@ CPU_STK MotorTaskStk[TASK_STACK_SIZE];
 
 static  void  WatchdogTask(void *p_arg);
 static  void  ADCTask(void *p_arg);
-static  void  MotorTask(void *p_arg);
+static  void  MotorTask(motor_command command);
 
 void ADCTaskInit(INT8U task_priority);
 void MotorTaskInit(INT8U task_priority);
@@ -115,8 +116,7 @@ void MotorTimerISRHandler(CPU_INT32U cpu_id);
 bool pouring = false;
 bool poured = true;
 
-#define REQUIRED_VOLUME 100
-int target_volume = 0;
+
 int tick = 0;
 bool paused = false;
 #define MAX_TICK 250
@@ -158,10 +158,9 @@ int main ()
 
     OSInit();
 
-    InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
+//    InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
 
     ADCTaskInit(ADC_TASK_PRIO);
-    // MotorTaskInit(MOTOR_TASK_PRIO);
 
     WatchdogTaskInit(WATCHDOG_TASK_PRIO);
 
@@ -170,15 +169,7 @@ int main ()
     OSStart();
 
 }
-static void startDispense(dispensing_ingredient ingredient){
 
-}
-
-static void startDispense(dispensing_ingredient * ingredients){
-	for(int i=0; i<3;i++){
-		Start
-	}
-}
 
 static void WatchdogTaskInit(INT8U task_priority){
     INT8U os_err;
@@ -261,8 +252,6 @@ static void ADCTask(void *p_arg) {
     	channel = getADCChannel(chan_num);
     	if((cmd & 0x300) == 0){
 			int32_t raw = (0xFFF & alt_read_word(channel));
-			printf("Channel %u, Raw: %d, Cur: %d, Target: %d\n", chan_num, raw, calculateVolume(raw, 3), target_volume);
-
     	}
 
         OSTimeDlyHMSM(0, 0, 0, 100);
@@ -270,79 +259,15 @@ static void ADCTask(void *p_arg) {
 
 }
 
-void MotorTaskInit(INT8U task_priority){
-    INT8U os_err;
 
-    os_err = OSTaskCreateExt((void (*)(void *)) MotorTask,   /* Create the start task.                               */
-                             (void          * ) 0,
-                             (OS_STK        * )&MotorTaskStk[TASK_STACK_SIZE - 1],
-                             (INT8U           ) task_priority,
-                             (INT16U          ) task_priority,  // reuse prio for ID
-                             (OS_STK        * )&MotorTaskStk[0],
-                             (INT32U          ) TASK_STACK_SIZE,
-                             (void          * )0,
-                             (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
-
-    if (os_err != OS_ERR_NONE) {
-        printf("Unable to start Motor Task"); /* Handle error. */
-    }
-}
-
-static void  MotorTask(void *p_arg) {
-    for(;;) {
-    	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
-    	uint32_t motor_num = (cmd & 0x300) >> 8;
-    	void* motor = PWM1_BASE;
-    	uint32_t increment = 0x0FF & cmd;
-    	if(motor_num != 0){
-    		switch(motor_num){
-				case 1: motor = PWM1_BASE; break;
-				case 2: motor = PWM2_BASE; break;
-				case 3: motor = PWM3_BASE; break;
-				case 4: motor = PWM4_BASE; break;
-				default: motor = PWM1_BASE; break;
-    		}
-    		alt_write_word(motor, increment * PWM_INC);
-    		//printf("PWM%d: %d/%d\n", motor_num, increment * PWM_INC, PWM_MAX);
-    	}
-        OSTimeDlyHMSM(0, 0, 1, 0);
-    }
-}
-
-void MotorTimerISRHandler(CPU_INT32U cpu_id) {
-	// Do stuff
-	if(pouring == true){
-		int32_t volume = getCurrentVolume(2);
-		if(paused){
-    		alt_write_word(ISR_MOTOR, 0);
-		} else {
-    		alt_write_word(ISR_MOTOR, MOTOR_SPEED);
-		}
-		if(tick < MAX_TICK){
-			tick++;
-		} else {
-			tick = 0;
-			paused = !paused;
-		}
-		if(volume <= target_volume){
-			pouring = false;
-    		alt_write_word(ISR_MOTOR, 0);
-		}
-	} else {
-		sw_read();
-		int8_t toggle = sw_get_bit_val(9);
-		if(toggle == 1 && poured == false){
-			target_volume = getCurrentVolume(2) - REQUIRED_VOLUME;
-			pouring = true;
-			poured = true;
-			paused = false;
-			tick = 0;
-		} else if(toggle == 0 && poured == true){
-			poured = false;
-		}
+static void  MotorTask(motor_command command) {
+	void* motor = PWM1_BASE;
+	switch(command.motor_num){
+		case 0: motor = PWM1_BASE; break;
+		case 1: motor = PWM2_BASE; break;
+		case 2: motor = PWM3_BASE; break;
+		case 3: motor = PWM4_BASE; break;
+		default: motor = PWM1_BASE; break;
 	}
-
-	// READ EOI Reg to clear interrupt (PAGE 23-10/23-11 of Cyclone V Hard Processor System
-	// Technical Reference Manual
-	volatile int32_t status = ARM_OSCL_TIMER_0_REG_EOI;
+	alt_write_word(motor, MOTOR_SPEED * command.state);
 }

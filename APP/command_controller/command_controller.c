@@ -3,6 +3,7 @@
 #include "command_controller.h"
 #include "../HWLIBS/alt_i2c.h"
 #include "../models/models.h"
+#include "../dispensing/dispensing.h"
 #include "../i2c_driver/i2c_driver.h"
 
 #define CMD_QUEUE_SIZE 1
@@ -26,11 +27,11 @@ void DispensingTask (void *p_arg)
     //Dispense liquid
     // If they're ordered, the task will dispense each item in turn
         if(my_recipe->ordered){
-        	startDispense(my_recipe->ingredient);
+        	startDispenseOrdered(my_recipe->ingredients);
         }// Otherwise spawn all threads simultaneously
         else{
         	for(int i =0; i<3;i++){
-        		startDispense(my_recipe.ingredient[i]);
+        		startDispenseSingle(my_recipe->ingredients[i], i);
         	}
         }
     //Update liquid levels
@@ -86,7 +87,10 @@ void get_recipe(recipe * my_recipe)
 void read_levels(void)
 {
     //Read levels from the dac into this array
-    uint16_t levels[3] = {0xDEAD, 0xBEEF, 0xBABE};
+    uint16_t levels[3] = { 0 };
+    for(int i =0;i<3;i++){
+    	levels[i] = getCurrentVolume(i);
+    }
 
     write((void *)&(levels[0]), sizeof(levels));
 }
