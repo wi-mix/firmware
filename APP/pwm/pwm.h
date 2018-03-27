@@ -7,7 +7,7 @@
 
 #ifndef PWM_H_
 #define PWM_H_
-
+#include "../models/models.h"
 #define PWM_MAKE_BASE(base)  ((void *) (((char *)  (ALT_LWFPGASLVS_ADDR))+ (base)))
 
 // PWM Locations
@@ -19,9 +19,13 @@
 #define PWM3_BASE PWM_MAKE_BASE(PWM3_ADD)
 #define PWM4_ADD 0x0000020C
 #define PWM4_BASE PWM_MAKE_BASE(PWM4_ADD)
-
+#define ISR_MOTOR PWM1_BASE
+#define MOTOR_SPEED PWM_MAX - PWM_INC
 // PWM Constants
 #define PWM_MAX 625000
 #define PWM_INC   6250
+
+
+void MotorTask(motor_command command);
 
 #endif /* PWM_H_ */
