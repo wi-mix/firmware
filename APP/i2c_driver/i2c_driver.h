@@ -4,7 +4,7 @@
 #include "socal/socal.h"
 #include "lib_def.h"
 #include "os_cpu.h"
-
+#include "tasks.h"
 #define I2C0_INTERRUPT_VECTOR 190
 #define I2C1_INTERRUPT_VECTOR 191
 #define I2C2_INTERRUPT_VECTOR 192

@@ -68,7 +68,7 @@
 #include "pwm/pwm.h"
 #include "timer.h"
 #include "models/models.h"
-
+#include "tasks.h"
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
@@ -77,9 +77,7 @@
 
 #define FPGA_TO_HPS_LW_ADDR(base)  ((void *) (((char *)  (ALT_LWFPGASLVS_ADDR))+ (base)))
 
-#define ADC_TASK_PRIO 		2
-#define MOTOR_TASK_PRIO 	3
-#define WATCHDOG_TASK_PRIO 	1
+
 
 #define TASK_STACK_SIZE 4096
 
@@ -159,6 +157,9 @@ int main ()
 
 //    InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
 
+
+    wimix_controller = initialize_cmd_ctrl();
+
     ADCTaskInit(ADC_TASK_PRIO);
 
     WatchdogTaskInit(WATCHDOG_TASK_PRIO);
@@ -166,7 +167,6 @@ int main ()
     CPU_IntEn();
 
     OSStart();
-
 }
 
 
@@ -186,13 +186,6 @@ static void WatchdogTaskInit(INT8U task_priority){
     if (os_err != OS_ERR_NONE) {
         ; /* Handle error. */
     }
-
-
-    wimix_controller = initialize_cmd_ctrl();
-
-    CPU_IntEn();
-
-    OSStart();
 }
 /*
 *********************************************************************************************************

@@ -13,12 +13,6 @@ typedef struct recipe
     unsigned char ordered;
 } recipe;
 
-typedef struct motor_command
-{
-	char state;
-	uint8_t motor_num;
-} motor_command;
-
 typedef struct pour_command
 {
 	char isOrdered;

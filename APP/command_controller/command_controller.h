@@ -4,8 +4,7 @@
 #include "../HWLIBS/alt_i2c.h"
 #include <stdbool.h>
 
-#define CMD_TASK_PRIO 4
-#define DISPENSE_TASK_PRIO 5
+
 typedef enum dispensing_status
 {
     DISPENSING,

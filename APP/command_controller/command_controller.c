@@ -7,20 +7,25 @@
 #include "../dispensing/dispensing.h"
 #include "../i2c_driver/i2c_driver.h"
 #include "../adc/adc.h"
+#include "../tasks.h"
 
 #define CMD_QUEUE_SIZE 1
 #define CONTROLLER_STACK_SIZE 4096
+#define DISPENSING_STACK_SIZE 4096
 
 CPU_STK Controller_Task_Stack[CONTROLLER_STACK_SIZE];
-CPU_STK Dispensing_Task_Stack[CONTROLLER_STACK_SIZE];
+CPU_STK Dispensing_Task_Stack[DISPENSING_STACK_SIZE];
 
 OS_EVENT* cmd_queue;
 void* cmd_msg_queue[CMD_QUEUE_SIZE];
 
 static command_controller cmd_controller;
+OS_EVENT * controller_semaphore;
 
 void DispensingTask (void *p_arg)
 {
+	uint8_t os_err;
+	OSSemPend(controller_semaphore, 0, &os_err);
 	printf("Starting dispensing \r\n");
     //Dereference controller
     command_controller * ctrl = (command_controller *)p_arg;
@@ -30,17 +35,18 @@ void DispensingTask (void *p_arg)
 
     //Dispense liquid
     // If they're ordered, the task will dispense each item in turn
-        if(my_recipe->ordered){
-        	startDispenseOrdered(my_recipe->ingredients);
-        }// Otherwise spawn all threads simultaneously
-        else{
-        	for(int i =0; i<3;i++){
-        		startDispenseSingle(my_recipe->ingredients[i], i);
-        	}
-        }
+	if(my_recipe->ordered)
+	{
+		startDispenseOrdered(my_recipe->ingredients);
+	}// Otherwise spawn all threads simultaneously
+	else
+	{
+		start_dispense_simultaneous(my_recipe->ingredients);
+	}
     //Update liquid levels
 
     //Unbusy
+	OSSemPend(controller_semaphore, 0, &os_err);
     ctrl->state = ACCEPTING;
     OSTaskDel(OS_PRIO_SELF);
 }
@@ -93,11 +99,11 @@ void get_recipe(recipe * my_recipe)
 	my_recipe->ingredients[0].amount=100;
 	my_recipe->ingredients[0].order=0;
 
-	my_recipe->ingredients[0].amount=200;
-	my_recipe->ingredients[0].order=0;
+	my_recipe->ingredients[1].amount=200;
+	my_recipe->ingredients[1].order=0;
 
-	my_recipe->ingredients[0].amount=300;
-	my_recipe->ingredients[0].order=0;
+	my_recipe->ingredients[2].amount=300;
+	my_recipe->ingredients[2].order=0;
 
 }
 
@@ -105,7 +111,8 @@ void read_levels(void)
 {
     //Read levels from the dac into this array
     uint16_t levels[3] = { 0 };
-    for(int i =0;i<3;i++){
+    for(int i = 0; i < 3; i++)
+    {
     	levels[i] = getCurrentVolume(i);
     }
 
@@ -114,6 +121,11 @@ void read_levels(void)
 
 void dispense(command_controller * controller, recipe * my_recipe)
 {
+	if(controller->state == DISPENSING)
+	{
+		printf("Controller is busy\r\n");
+		return;
+	}
     controller->state = DISPENSING;
     if(controller->current_recipe != NULL)
 	{
@@ -142,6 +154,8 @@ command_controller * initialize_cmd_ctrl()
 {
 	printf("Initializing cmd controller\r\n");
 	uint8_t os_err;
+	controller_semaphore = OSSemCreate(1);
+	OSSemPend(controller_semaphore, 0, &os_err);
     cmd_controller.state = ACCEPTING;
     cmd_controller.dispense = &dispense;
     cmd_controller.command_handler = &command_handler;
@@ -151,17 +165,19 @@ command_controller * initialize_cmd_ctrl()
 
     printf("Initialized I2C2\r\n");
     os_err = OSTaskCreateExt((void (*)(void *)) CommandProcessingTask,   /* Create the start task.                               */
-                                 (void          * ) 0,
-                                 (OS_STK        * )&Controller_Task_Stack[CONTROLLER_STACK_SIZE - 1],
-                                 (INT8U           ) CMD_TASK_PRIO,
-                                 (INT16U          ) CMD_TASK_PRIO,  // reuse prio for ID
-                                 (OS_STK        * )&Controller_Task_Stack[0],
-                                 (INT32U          ) CONTROLLER_STACK_SIZE,
-                                 (void          * )0,
-                                 (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
+							 (void          * ) &cmd_controller,
+							 (OS_STK        * )&Controller_Task_Stack[CONTROLLER_STACK_SIZE - 1],
+							 (INT8U           ) CMD_TASK_PRIO,
+							 (INT16U          ) CMD_TASK_PRIO,  // reuse prio for ID
+							 (OS_STK        * )&Controller_Task_Stack[0],
+							 (INT32U          ) CONTROLLER_STACK_SIZE,
+							 (void          * )0,
+							 (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
 
-        if (os_err != OS_ERR_NONE) {
-            ; /* Handle error. */
-        }
+	if (os_err != OS_ERR_NONE)
+	{
+		; /* Handle error. */
+	}
+	OSSemPost(controller_semaphore);
     return &cmd_controller;
 }

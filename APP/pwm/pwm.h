@@ -7,7 +7,6 @@
 
 #ifndef PWM_H_
 #define PWM_H_
-#include "../models/models.h"
 #define PWM_MAKE_BASE(base)  ((void *) (((char *)  (ALT_LWFPGASLVS_ADDR))+ (base)))
 
 // PWM Locations
@@ -25,7 +24,21 @@
 #define PWM_MAX 625000
 #define PWM_INC   6250
 
+typedef enum motor_state
+{
+	RUN,
+	STOP
+} motor_state;
+
+typedef struct motor_command
+{
+	motor_state state;
+	uint8_t motor_num;
+} motor_command;
 
 void MotorTask(motor_command command);
+
+
+
 
 #endif /* PWM_H_ */
