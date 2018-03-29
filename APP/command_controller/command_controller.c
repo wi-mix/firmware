@@ -48,6 +48,7 @@ void DispensingTask (void *p_arg)
     //Unbusy
 	OSSemPend(controller_semaphore, 0, &os_err);
     ctrl->state = ACCEPTING;
+    OSSemPost(controller_semaphore);
     OSTaskDel(OS_PRIO_SELF);
 }
 
@@ -64,7 +65,7 @@ void CommandProcessingTask(void *p_arg)
         //Use I2C to read new command from the PROWF
 //        read((void *)&command, sizeof(command_t));
         //For testing:
-        command = DISPENSE;
+        command = READ_LEVELS;
         printf("Processing command: %d!\r\n", command);
         command_handler(ctrl, command);
     	OSTimeDlyHMSM(0, 0, 1, 0);
@@ -95,14 +96,14 @@ void command_handler(command_controller * controller, command_t command)
 void get_recipe(recipe * my_recipe)
 {
 //    read((void*)my_recipe, sizeof(recipe));
-	my_recipe->ordered = 0;
-	my_recipe->ingredients[0].amount=100;
-	my_recipe->ingredients[0].order=0;
+	my_recipe->ordered = 1;
+	my_recipe->ingredients[0].amount=25;
+	my_recipe->ingredients[0].order=2;
 
-	my_recipe->ingredients[1].amount=200;
-	my_recipe->ingredients[1].order=0;
+	my_recipe->ingredients[1].amount=25;
+	my_recipe->ingredients[1].order=1;
 
-	my_recipe->ingredients[2].amount=300;
+	my_recipe->ingredients[2].amount=50;
 	my_recipe->ingredients[2].order=0;
 
 }
@@ -115,8 +116,8 @@ void read_levels(void)
     {
     	levels[i] = getCurrentVolume(i);
     }
-
-    write((void *)&(levels[0]), sizeof(levels));
+    printf("Wow the levels are %d, %d, %d\r\n", levels[0], levels[1], levels[2]);
+    //write((void *)&(levels[0]), sizeof(levels));
 }
 
 void dispense(command_controller * controller, recipe * my_recipe)

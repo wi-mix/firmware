@@ -26,8 +26,8 @@
 
 typedef enum motor_state
 {
-	RUN,
-	STOP
+	STOP,
+	RUN
 } motor_state;
 
 typedef struct motor_command

@@ -6,7 +6,7 @@
  */
 #include <hps.h>
 #include <socal.h>
-#include <stdint.h>]
+#include <stdint.h>
 #include <stdio.h>
 #include "../models/models.h"
 #include "pwm.h"
