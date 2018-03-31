@@ -100,14 +100,9 @@ CPU_STK MotorTaskStk[TASK_STACK_SIZE];
 
 static  void  WatchdogTask(void *p_arg);
 static  void  ADCTask(void *p_arg);
-static  void  MotorTask(motor_command command);
 
 void ADCTaskInit(INT8U task_priority);
-void MotorTaskInit(INT8U task_priority);
 void WatchdogTaskInit(INT8U task_priority);
-
-void MotorTimerISRHandler(CPU_INT32U cpu_id);
-
 
 
 bool pouring = false;
@@ -209,10 +204,10 @@ static  void  WatchdogTask (void *p_arg) {
     for(;;) {
         BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
 
-        OSTimeDlyHMSM(0, 0, 0, 500);
+        OSTimeDlyHMSM(0, 0, 0, 250);
         BSP_LED_On();
 
-        OSTimeDlyHMSM(0, 0, 0, 500);
+        OSTimeDlyHMSM(0, 0, 0, 250);
         BSP_LED_Off();
     }
 

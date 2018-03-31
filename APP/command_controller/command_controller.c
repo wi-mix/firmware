@@ -22,35 +22,6 @@ void* cmd_msg_queue[CMD_QUEUE_SIZE];
 static command_controller cmd_controller;
 OS_EVENT * controller_semaphore;
 
-void DispensingTask (void *p_arg)
-{
-	uint8_t os_err;
-	OSSemPend(controller_semaphore, 0, &os_err);
-	printf("Starting dispensing \r\n");
-    //Dereference controller
-    command_controller * ctrl = (command_controller *)p_arg;
-
-    recipe * my_recipe = ctrl->current_recipe;
-    ctrl->state = DISPENSING;
-
-    //Dispense liquid
-    // If they're ordered, the task will dispense each item in turn
-	if(my_recipe->ordered)
-	{
-		startDispenseOrdered(my_recipe->ingredients);
-	}// Otherwise spawn all threads simultaneously
-	else
-	{
-		start_dispense_simultaneous(my_recipe->ingredients);
-	}
-    //Update liquid levels
-
-    //Unbusy
-	OSSemPend(controller_semaphore, 0, &os_err);
-    ctrl->state = ACCEPTING;
-    OSSemPost(controller_semaphore);
-    OSTaskDel(OS_PRIO_SELF);
-}
 
 /*
 * Processes commands and launches dispensing or level reading depending on outcome
@@ -65,7 +36,7 @@ void CommandProcessingTask(void *p_arg)
         //Use I2C to read new command from the PROWF
 //        read((void *)&command, sizeof(command_t));
         //For testing:
-        command = READ_LEVELS;
+        command = DISPENSE;
         printf("Processing command: %d!\r\n", command);
         command_handler(ctrl, command);
     	OSTimeDlyHMSM(0, 0, 1, 0);
@@ -96,14 +67,14 @@ void command_handler(command_controller * controller, command_t command)
 void get_recipe(recipe * my_recipe)
 {
 //    read((void*)my_recipe, sizeof(recipe));
-	my_recipe->ordered = 1;
-	my_recipe->ingredients[0].amount=25;
+	my_recipe->ordered = 0;
+	my_recipe->ingredients[0].amount=100;
 	my_recipe->ingredients[0].order=2;
 
-	my_recipe->ingredients[1].amount=25;
+	my_recipe->ingredients[1].amount=100;
 	my_recipe->ingredients[1].order=1;
 
-	my_recipe->ingredients[2].amount=50;
+	my_recipe->ingredients[2].amount=100;
 	my_recipe->ingredients[2].order=0;
 
 }
@@ -149,6 +120,37 @@ void dispense(command_controller * controller, recipe * my_recipe)
             if (os_err != OS_ERR_NONE) {
                 ; /* Handle error. */
             }
+}
+
+
+void DispensingTask (void *p_arg)
+{
+	uint8_t os_err;
+	OSSemPend(controller_semaphore, 0, &os_err);
+	printf("Starting dispensing \r\n");
+    //Dereference controller
+    command_controller * ctrl = (command_controller *)p_arg;
+
+    recipe * my_recipe = ctrl->current_recipe;
+    ctrl->state = DISPENSING;
+
+    //Dispense liquid
+    // If they're ordered, the task will dispense each item in turn
+	if(my_recipe->ordered)
+	{
+		OrderedDispenseTaskInit(my_recipe);
+	}// Otherwise spawn all threads simultaneously
+	else
+	{
+		SimultaneousDispenseTaskInit(my_recipe);
+	}
+    //Update liquid levels
+
+    //Unbusy
+	OSSemPend(controller_semaphore, 0, &os_err);
+    ctrl->state = ACCEPTING;
+    OSSemPost(controller_semaphore);
+    OSTaskDel(OS_PRIO_SELF);
 }
 
 command_controller * initialize_cmd_ctrl()

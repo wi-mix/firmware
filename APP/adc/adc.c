@@ -58,10 +58,18 @@ int32_t calculateVolume(int32_t raw_value, int8_t tape_num){
 float calculateHeight(int32_t raw_value, int8_t tape_num){
 	float height = 0;
 	switch(tape_num){
-		case 1: height = ((float)raw_value - 2423.5)/61.345; break;
-		case 2: height = ((float)raw_value - 2150.5)/60.695; break;
-		case 3: height = ((float)raw_value - 2289.2)/61.090; break;
-		default: height = -1; break;
+		case 0:
+			height = ((float)raw_value - 2423.5)/61.345;
+			break;
+		case 1:
+			height = ((float)raw_value - 2150.5)/60.695;
+			break;
+		case 2:
+			height = ((float)raw_value - 2289.2)/61.090;
+			break;
+		default:
+			height = -1;
+			break;
 	}
 	return height;
 }

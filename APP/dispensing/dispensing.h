@@ -8,9 +8,9 @@
 #ifndef DISPENSING_H
 #define DISPENSING_H
 
-void startDispenseOrdered(dispensing_ingredient * ingredients);
-void start_dispense_simultaneous(dispensing_ingredient * ingredients);
-void startDispenseSingle(dispensing_ingredient ingredient, int canister_index);
-void PourTask (void *p_arg);
+void OrderedDispenseTaskInit(recipe * dispensing_recipe);
+void SimultaneousDispenseTaskInit(recipe * dispensing_recipe);
+void SimultaneousDispenseTask (void *p_arg);
+void OrderedDispenseTask (void *p_arg);
 
 #endif // DISPENSING_H
