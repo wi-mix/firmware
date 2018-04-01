@@ -39,7 +39,7 @@ void SimultaneousDispenseTaskInit(recipe * dispensing_recipe)
 
 	if (os_err != OS_ERR_NONE)
 	{
-		printf("Unable to start ordered pouring task"); /* Handle error. */
+
 	}
 }
 
@@ -59,7 +59,7 @@ void OrderedDispenseTaskInit(recipe * dispensing_recipe)
 
 	if (os_err != OS_ERR_NONE)
 	{
-		printf("Unable to start ordered pouring task"); /* Handle error. */
+
 	}
 }
 
@@ -152,7 +152,6 @@ void OrderedDispenseTask(void * p_arg)
 	}
 
 	OSSemPost(controller_semaphore);
-	
     OSTaskDel(OS_PRIO_SELF);
 }
 

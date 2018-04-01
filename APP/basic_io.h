@@ -19,4 +19,5 @@
 void sw_read(void);
 int8_t sw_get_bit_val(uint8_t bit);
 int32_t sw_get_val(void);
+void leds_set(uint8_t led, uint32_t value);
 #endif /* BASIC_IO_H_ */

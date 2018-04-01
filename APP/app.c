@@ -150,12 +150,7 @@ int main ()
 
     OSInit();
 
-//    InitHPSTimerInterrupt(200000, MotorTimerISRHandler);
-
-
     wimix_controller = initialize_cmd_ctrl();
-
-    ADCTaskInit(ADC_TASK_PRIO);
 
     WatchdogTaskInit(WATCHDOG_TASK_PRIO);
 
@@ -205,9 +200,11 @@ static  void  WatchdogTask (void *p_arg) {
         BSP_WatchDog_Reset();                                   /* Reset the watchdog.                                  */
 
         OSTimeDlyHMSM(0, 0, 0, 250);
+        leds_set(9, 1);
         BSP_LED_On();
 
         OSTimeDlyHMSM(0, 0, 0, 250);
+        leds_set(9, 0);
         BSP_LED_Off();
     }
 
@@ -227,7 +224,7 @@ void ADCTaskInit(INT8U task_priority){
                              (INT16U          )(OS_TASK_OPT_STK_CLR | OS_TASK_OPT_STK_CHK));
 
     if (os_err != OS_ERR_NONE) {
-        printf("Unable to start ADC Task"); /* Handle error. */
+
     }
 }
 

@@ -15,7 +15,6 @@
 void ControlMotor(uint8_t channel, uint32_t speed)
 {
 	void* motor = PWM1_BASE;
-	printf("RoWooW we are now: %d on %d\r\n", speed, channel);
 	switch(channel)
 	{
 		case 0: motor = PWM1_BASE; break;

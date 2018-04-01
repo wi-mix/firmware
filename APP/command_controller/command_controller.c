@@ -30,16 +30,12 @@ void CommandProcessingTask(void *p_arg)
 {
     command_t command;
     command_controller * ctrl = (command_controller *)p_arg;
-    printf("Command task started!\r\n");
     while(true)
     {
         //Use I2C to read new command from the PROWF
-//        read((void *)&command, sizeof(command_t));
-        //For testing:
-        command = DISPENSE;
-        printf("Processing command: %d!\r\n", command);
+        read((void *)&command, sizeof(command_t)); 
         command_handler(ctrl, command);
-    	OSTimeDlyHMSM(0, 0, 1, 0);
+    	//OSTimeDlyHMSM(0, 0, 1, 0);
     }
 }
 
@@ -53,30 +49,21 @@ void command_handler(command_controller * controller, command_t command)
             break;
         case DISPENSE_REQUEST:
             write((void *)&(controller->state), sizeof(dispensing_status));
-            break;
-        case DISPENSE:
-        	printf("DISPENSE option selected\r\n");
-            get_recipe(my_recipe);
-            dispense(controller, my_recipe);
+            if(controller->state == ACCEPTING)
+            {
+            	get_recipe(my_recipe);
+				dispense(controller, my_recipe);
+            }
             break;
         default:
             break;
     }
+    printf("Processing command: %d!\r\n", command);
 }
 
 void get_recipe(recipe * my_recipe)
 {
-//    read((void*)my_recipe, sizeof(recipe));
-	my_recipe->ordered = 0;
-	my_recipe->ingredients[0].amount=100;
-	my_recipe->ingredients[0].order=2;
-
-	my_recipe->ingredients[1].amount=100;
-	my_recipe->ingredients[1].order=1;
-
-	my_recipe->ingredients[2].amount=100;
-	my_recipe->ingredients[2].order=0;
-
+    read((void*)my_recipe, sizeof(recipe));
 }
 
 void read_levels(void)
@@ -85,10 +72,9 @@ void read_levels(void)
     uint16_t levels[3] = { 0 };
     for(int i = 0; i < 3; i++)
     {
-    	levels[i] = getCurrentVolume(i);
+    	levels[i] = HTONS(getCurrentVolume(i));
     }
-    printf("Wow the levels are %d, %d, %d\r\n", levels[0], levels[1], levels[2]);
-    //write((void *)&(levels[0]), sizeof(levels));
+    write((void *)&(levels[0]), sizeof(levels));
 }
 
 void dispense(command_controller * controller, recipe * my_recipe)
@@ -105,7 +91,6 @@ void dispense(command_controller * controller, recipe * my_recipe)
 	}
 
     controller->current_recipe = my_recipe;
-    printf("Starting dispensing task\r\n");
 	uint8_t os_err;
     os_err = OSTaskCreateExt((void (*)(void *)) DispensingTask,   /* Create the start task.                               */
                                      (void          * ) controller,
@@ -127,7 +112,6 @@ void DispensingTask (void *p_arg)
 {
 	uint8_t os_err;
 	OSSemPend(controller_semaphore, 0, &os_err);
-	printf("Starting dispensing \r\n");
     //Dereference controller
     command_controller * ctrl = (command_controller *)p_arg;
 
@@ -155,7 +139,6 @@ void DispensingTask (void *p_arg)
 
 command_controller * initialize_cmd_ctrl()
 {
-	printf("Initializing cmd controller\r\n");
 	uint8_t os_err;
 	controller_semaphore = OSSemCreate(1);
 	OSSemPend(controller_semaphore, 0, &os_err);
@@ -166,7 +149,6 @@ command_controller * initialize_cmd_ctrl()
     cmd_queue = OSQCreate(cmd_msg_queue, CMD_QUEUE_SIZE);
     init_I2C2(&(cmd_controller.command_i2c));
 
-    printf("Initialized I2C2\r\n");
     os_err = OSTaskCreateExt((void (*)(void *)) CommandProcessingTask,   /* Create the start task.                               */
 							 (void          * ) &cmd_controller,
 							 (OS_STK        * )&Controller_Task_Stack[CONTROLLER_STACK_SIZE - 1],
