@@ -7,6 +7,7 @@
 #include <string.h>
 #include "../HWLIBS/alt_i2c.h"
 #include "../models/models.h"
+#include "../UART/uart.h"
 #include "i2c_driver.h"
 #include "bsp.h"
 #include "bsp_int.h"
@@ -34,25 +35,25 @@ void init_I2C2(ALT_I2C_DEV_t * device)
     
     i2c2_device = device;
     err = alt_i2c_init(ALT_I2C_I2C1, i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error initializing i2c2\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error initializing i2c2\r\n");
     err =  alt_i2c_disable(i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error disabling i2c2\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error disabling i2c2\r\n");
     
     ALT_I2C_SLAVE_CONFIG_t slave_config = { .addr_mode = ALT_I2C_ADDR_MODE_7_BIT,
                                             .addr = 17,
                                             .nack_enable = false};
     
     err = alt_i2c_slave_config_set(i2c2_device, &slave_config);
-        if(err != ALT_E_SUCCESS) printf("Error configuring slave device\r\n");
+        if(err != ALT_E_SUCCESS) UART_print("Error configuring slave device\r\n");
 
     err = alt_i2c_op_mode_set(i2c2_device, ALT_I2C_MODE_SLAVE);
-    if(err != ALT_E_SUCCESS) printf("Error setting i2c2 mode\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error setting i2c2 mode\r\n");
     err = alt_i2c_sda_hold_time_set(i2c2_device, 30);
-    if(err != ALT_E_SUCCESS) printf("Error setting i2c2 SDA Hold Time\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error setting i2c2 SDA Hold Time\r\n");
     err = alt_i2c_sda_setup_time_set(i2c2_device, 11);
-    if(err != ALT_E_SUCCESS) printf("Error setting i2c2 SDA setup Time\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error setting i2c2 SDA setup Time\r\n");
     err = alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
-    if(err != ALT_E_SUCCESS) printf("Error clearing interrupts\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error clearing interrupts\r\n");
     err = alt_i2c_int_enable(i2c2_device,
                         ALT_I2C_STATUS_STOP_DET | 
                         ALT_I2C_STATUS_RX_DONE | 
@@ -60,13 +61,13 @@ void init_I2C2(ALT_I2C_DEV_t * device)
                         ALT_I2C_STATUS_RD_REQ |
 						ALT_I2C_STATUS_START_DET |
 						ALT_I2C_STATUS_TX_ABORT);
-    if(err != ALT_E_SUCCESS) printf("Error enabling interrupts\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error enabling interrupts\n");
     init_I2C2_interrupt();
 
     err = alt_i2c_rx_fifo_threshold_set(i2c2_device, HALF_FULL);
-    if(err != ALT_E_SUCCESS) printf("Error setting fifo\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error setting fifo\r\n");
     err =alt_i2c_enable(i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error enabling device\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error enabling device\r\n");
 }
 
 void test_I2C2_as_master(ALT_I2C_DEV_t * device)
@@ -78,9 +79,9 @@ void test_I2C2_as_master(ALT_I2C_DEV_t * device)
     
     i2c2_device = device;
     err = alt_i2c_init(ALT_I2C_I2C1, i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error initializing i2c2\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error initializing i2c2\r\n");
     err = alt_i2c_disable(i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error disabling i2c2\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error disabling i2c2\r\n");
     ALT_I2C_MASTER_CONFIG_t master_config = {
         .addr_mode = ALT_I2C_ADDR_MODE_7_BIT,
         .restart_enable = true,
@@ -92,27 +93,27 @@ void test_I2C2_as_master(ALT_I2C_DEV_t * device)
 
     
     err = alt_i2c_master_config_set(i2c2_device, &master_config);
-    if(err != ALT_E_SUCCESS) printf("Error configuring master device\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error configuring master device\r\n");
     err = alt_i2c_op_mode_set(i2c2_device, ALT_I2C_MODE_MASTER);
-        if(err != ALT_E_SUCCESS) printf("Error setting i2c2 mode\r\n");
+        if(err != ALT_E_SUCCESS) UART_print("Error setting i2c2 mode\r\n");
     err = alt_i2c_int_disable(i2c2_device, ALT_I2C_STATUS_INT_ALL);
-    if(err != ALT_E_SUCCESS) printf("Error clearing interrupts\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error clearing interrupts\r\n");
     err = alt_i2c_int_enable(i2c2_device,
                         ALT_I2C_STATUS_STOP_DET | 
                         ALT_I2C_STATUS_RX_DONE | 
                         ALT_I2C_STATUS_RX_FULL |
                         ALT_I2C_STATUS_RD_REQ);
-    if(err != ALT_E_SUCCESS) printf("Error enabling interrupts\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error enabling interrupts\n");
     init_I2C2_interrupt();
 
     err = alt_i2c_rx_fifo_threshold_set(i2c2_device, HALF_FULL);
-    if(err != ALT_E_SUCCESS) printf("Error setting fifo\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error setting fifo\r\n");
     err = alt_i2c_enable(i2c2_device);
-    if(err != ALT_E_SUCCESS) printf("Error enabling device\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error enabling device\r\n");
     err = alt_i2c_is_enabled(i2c2_device);
-    if(err != ALT_E_TRUE) printf("Device is not enabled\r\n");
+    if(err != ALT_E_TRUE) UART_print("Device is not enabled\r\n");
     err = alt_i2c_master_config_get(i2c2_device, &master_config);
-    if(err != ALT_E_SUCCESS) printf("Could not fetch config!\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Could not fetch config!\r\n");
 
 }
 
@@ -120,7 +121,7 @@ void test_target_device()
 {
 	ALT_STATUS_CODE err;
 	err = alt_i2c_master_target_set(i2c2_device, 17);
-	if(err != ALT_E_SUCCESS) printf("Error targeting device 17\r\n");
+	if(err != ALT_E_SUCCESS) UART_print("Error targeting device\r\n");
 }
 
 void test_master_send()
@@ -128,7 +129,7 @@ void test_master_send()
 	int test = 5;
 	ALT_STATUS_CODE err;
 	err = alt_i2c_master_transmit(i2c2_device, (void *)(&test), 4, 1, 1);
-    if(err != ALT_E_SUCCESS) printf("Error transmitting to device 17\r\n");
+    if(err != ALT_E_SUCCESS) UART_print("Error transmitting to device 17\r\n");
 }
 
 void init_I2C2_interrupt(void)

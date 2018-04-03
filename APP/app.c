@@ -58,10 +58,12 @@
 #include  <socal.h>
 #include  <hwlib.h>
 
+
+#include <alt_i2c.h>
+#include <alt_bridge_manager.h>
+
 #include "command_controller/command_controller.h"
 #include "models/models.h"
-#include <alt_i2c.h>
-
 #include "basic_io.h"
 #include "adc/adc.h"
 #include "seven_seg.h"
@@ -69,6 +71,7 @@
 #include "timer.h"
 #include "models/models.h"
 #include "tasks.h"
+#include "uart.h"
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
@@ -138,8 +141,9 @@ int main ()
     BSP_L2C310Config();                                         /* Configure the L2 cache controller.                   */
     BSP_CachesEn();                                             /* Enable L1 I&D caches + L2 unified cache.             */
 
-
-
+    ALT_BRIDGE_t lw_bridge = ALT_BRIDGE_LWH2F;
+    ALT_STATUS_CODE err = alt_bridge_init(lw_bridge,NULL,NULL);
+    UART_Init();
     CPU_Init();
 
     Mem_Init();
@@ -177,21 +181,7 @@ static void WatchdogTaskInit(INT8U task_priority){
         ; /* Handle error. */
     }
 }
-/*
-*********************************************************************************************************
-*                                           App_TaskStart()
-*
-* Description : Startup task example code.
-*
-* Arguments   : p_arg       Argument passed by 'OSTaskCreate()'.
-*
-* Returns     : none.
-*
-* Created by  : main().
-*
-* Notes       : (1) The ticker MUST be initialised AFTER multitasking has started.
-*********************************************************************************************************
-*/
+
 static  void  WatchdogTask (void *p_arg) {
 
     BSP_OS_TmrTickInit(OS_TICKS_PER_SEC);                       /* Configure and enable OS tick interrupt.              */
@@ -229,12 +219,14 @@ void ADCTaskInit(INT8U task_priority){
 }
 
 static void ADCTask(void *p_arg) {
-    for(;;) {
+    for(;;) 
+    {
     	uint32_t cmd = 0x3FF & alt_read_word(SW_BASE);
     	uint32_t chan_num = 0x0FF & cmd;
     	int32_t* channel = 0;
     	channel = getADCChannel(chan_num);
-    	if((cmd & 0x300) == 0){
+    	if((cmd & 0x300) == 0)
+        {
 			int32_t raw = (0xFFF & alt_read_word(channel));
     	}
 

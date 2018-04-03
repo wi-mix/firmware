@@ -80,7 +80,6 @@ void SimultaneousDispenseTask(void * p_arg)
 		for(int i = 0; i < 3; i++)
 		{
 			int32_t pause_target = pause_targets[states[i]];
-			printf("Hello my good friend %d done: %d, pause: %d, state: %d, target: %d\r\n", i, done[i], pause[i], states[i], pause_target);
 			
 			if(done[i])
 			{
@@ -105,10 +104,8 @@ void SimultaneousDispenseTask(void * p_arg)
 					{
 						done[i] = 1;
 						ControlMotor(i, 0);
-						printf("Finished pouring canister %d\r\n", i);
 					}
 				}
-				printf("The current volume for canister %d is %d\r\n", i, getCurrentVolume(i));
 			}
 		}
 		OSTimeDlyHMSM(0, 0, 0, 50); // Check every 50ms
@@ -132,21 +129,17 @@ void OrderedDispenseTask(void * p_arg)
 			{
 				int16_t amount = dispensing_recipe.ingredients[i].amount;
 				int32_t target_volume = getTargetVolume(i, amount);
-				printf("The target volume for canister %d is %d\r\n", i, target_volume);
 				
 				for(int j = 0; j < PAUSE_TARGETS_SIZE; j++)
 				{			
 					ControlMotor(i, 100);
 					while((getCurrentVolume(i) - target_volume > pause_targets[j]))
 					{
-						printf("The current volume for canister %d is %d\r\n", i, getCurrentVolume(i));
-
 						OSTimeDlyHMSM(0, 0, 0, 50); // Check every 50ms
 					}
 					ControlMotor(i, 0);
 					OSTimeDlyHMSM(0, 0, 0, 250); // Wait 1s for levels to stabilize, then pour again
 				}
-				printf("Finished pouring canister %d\r\n", i);
 			}
 		}
 	}

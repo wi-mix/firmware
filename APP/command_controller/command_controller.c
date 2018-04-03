@@ -58,7 +58,6 @@ void command_handler(command_controller * controller, command_t command)
         default:
             break;
     }
-    printf("Processing command: %d!\r\n", command);
 }
 
 void get_recipe(recipe * my_recipe)
@@ -81,7 +80,6 @@ void dispense(command_controller * controller, recipe * my_recipe)
 {
 	if(controller->state == DISPENSING)
 	{
-		printf("Controller is busy\r\n");
 		return;
 	}
     controller->state = DISPENSING;
