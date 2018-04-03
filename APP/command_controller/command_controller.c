@@ -42,6 +42,7 @@ void CommandProcessingTask(void *p_arg)
 void command_handler(command_controller * controller, command_t command)
 {
     recipe* my_recipe = (recipe *)malloc(sizeof(recipe));
+    uint8_t os_err;
     switch(command)
     {
         case READ_LEVELS:
@@ -49,9 +50,11 @@ void command_handler(command_controller * controller, command_t command)
             break;
         case DISPENSE_REQUEST:
             write((void *)&(controller->state), sizeof(dispensing_status));
+            OSSemPend(controller_semaphore, 0, &os_err);
             if(controller->state == ACCEPTING)
             {
             	get_recipe(my_recipe);
+                OSSemPost(controller_semaphore);
 				dispense(controller, my_recipe);
             }
             break;
@@ -78,8 +81,11 @@ void read_levels(void)
 
 void dispense(command_controller * controller, recipe * my_recipe)
 {
+	uint8_t os_err;
+    OSSemPend(controller_semaphore, 0, &os_err);
 	if(controller->state == DISPENSING)
 	{
+        OSSemPost(controller_semaphore);
 		return;
 	}
     controller->state = DISPENSING;
@@ -89,7 +95,9 @@ void dispense(command_controller * controller, recipe * my_recipe)
 	}
 
     controller->current_recipe = my_recipe;
-	uint8_t os_err;
+    OSSemPost(controller_semaphore);
+
+
     os_err = OSTaskCreateExt((void (*)(void *)) DispensingTask,   /* Create the start task.                               */
                                      (void          * ) controller,
                                      (OS_STK        * )&Dispensing_Task_Stack[CONTROLLER_STACK_SIZE - 1],
@@ -117,13 +125,15 @@ void DispensingTask (void *p_arg)
     ctrl->state = DISPENSING;
 
     //Dispense liquid
-    // If they're ordered, the task will dispense each item in turn
+
 	if(my_recipe->ordered)
 	{
+		// If they're ordered, the task will dispense each item in turn
 		OrderedDispenseTaskInit(my_recipe);
-	}// Otherwise spawn all threads simultaneously
+	}
 	else
 	{
+		// Otherwise start all the pumps at once
 		SimultaneousDispenseTaskInit(my_recipe);
 	}
     //Update liquid levels

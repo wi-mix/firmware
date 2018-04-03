@@ -71,7 +71,7 @@
 #include "timer.h"
 #include "models/models.h"
 #include "tasks.h"
-#include "uart.h"
+#include "UART/uart.h"
 
 // Compute absolute address of any slave component attached to lightweight bridge
 // base is address of component in QSYS window
