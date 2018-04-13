@@ -8,6 +8,9 @@
 #include "../i2c_driver/i2c_driver.h"
 #include "../adc/adc.h"
 #include "../tasks.h"
+#include "../basic_io.h"
+#include "../UART/uart.h"
+#include <string.h>
 
 #define CMD_QUEUE_SIZE 1
 #define CONTROLLER_STACK_SIZE 4096
@@ -21,6 +24,7 @@ void* cmd_msg_queue[CMD_QUEUE_SIZE];
 
 static command_controller cmd_controller;
 OS_EVENT * controller_semaphore;
+OS_EVENT * pouring_semaphore;
 
 
 /*
@@ -29,12 +33,17 @@ OS_EVENT * controller_semaphore;
 void CommandProcessingTask(void *p_arg)
 {
     command_t command;
+    char hlep[2] = { 0 };
     command_controller * ctrl = (command_controller *)p_arg;
     while(true)
     {
         //Use I2C to read new command from the PROWF
+    	UART_print("Waiting for a command!\r\n");
         read((void *)&command, sizeof(command_t)); 
         command_handler(ctrl, command);
+        snprintf(hlep, 2, "%d", command);
+        UART_print("Command handled!\r\n");
+        UART_print(hlep);
     	//OSTimeDlyHMSM(0, 0, 1, 0);
     }
 }
@@ -49,18 +58,27 @@ void command_handler(command_controller * controller, command_t command)
             read_levels();
             break;
         case DISPENSE_REQUEST:
+        	UART_print("Dispense request!\r\n");
+        	OSSemPend(controller_semaphore, 0, &os_err);
             write((void *)&(controller->state), sizeof(dispensing_status));
-            OSSemPend(controller_semaphore, 0, &os_err);
+            leds_set(7, controller->state);
             if(controller->state == ACCEPTING)
             {
+            	UART_print("Ready to pour current request!\r\n");
+            	OSSemPost(controller_semaphore);
             	get_recipe(my_recipe);
-                OSSemPost(controller_semaphore);
 				dispense(controller, my_recipe);
+            }
+            else
+            {
+            	UART_print("Too busy to pour current request!\r\n");
+            	OSSemPost(controller_semaphore);
             }
             break;
         default:
             break;
     }
+
 }
 
 void get_recipe(recipe * my_recipe)
@@ -85,10 +103,13 @@ void dispense(command_controller * controller, recipe * my_recipe)
     OSSemPend(controller_semaphore, 0, &os_err);
 	if(controller->state == DISPENSING)
 	{
+		UART_print("Busy cancel pour\r\n");
         OSSemPost(controller_semaphore);
 		return;
 	}
+	UART_print("Continue to pour\r\n");
     controller->state = DISPENSING;
+    UART_print("Setting back to dispensing\r\n");
     if(controller->current_recipe != NULL)
 	{
     	free(controller->current_recipe);
@@ -117,15 +138,17 @@ void dispense(command_controller * controller, recipe * my_recipe)
 void DispensingTask (void *p_arg)
 {
 	uint8_t os_err;
-	OSSemPend(controller_semaphore, 0, &os_err);
+	UART_print("Start dispensing task\r\n");
     //Dereference controller
     command_controller * ctrl = (command_controller *)p_arg;
-
+    OSSemPend(controller_semaphore, 0, &os_err);
     recipe * my_recipe = ctrl->current_recipe;
     ctrl->state = DISPENSING;
+    UART_print("Setting back to dispensing\r\n");
+    leds_set(8, 1);
+    OSSemPost(controller_semaphore);
 
     //Dispense liquid
-
 	if(my_recipe->ordered)
 	{
 		// If they're ordered, the task will dispense each item in turn
@@ -139,8 +162,11 @@ void DispensingTask (void *p_arg)
     //Update liquid levels
 
     //Unbusy
+	OSSemPend(pouring_semaphore, 0, &os_err);
 	OSSemPend(controller_semaphore, 0, &os_err);
     ctrl->state = ACCEPTING;
+    UART_print("Setting back to accepting\r\n");
+    leds_set(8, 0);
     OSSemPost(controller_semaphore);
     OSTaskDel(OS_PRIO_SELF);
 }
@@ -149,6 +175,7 @@ command_controller * initialize_cmd_ctrl()
 {
 	uint8_t os_err;
 	controller_semaphore = OSSemCreate(1);
+	pouring_semaphore = OSSemCreate(0);
 	OSSemPend(controller_semaphore, 0, &os_err);
     cmd_controller.state = ACCEPTING;
     cmd_controller.dispense = &dispense;

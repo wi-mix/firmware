@@ -20,7 +20,7 @@ const int32_t pause_targets[PAUSE_TARGETS_SIZE] = {50, 25, 10, 5};
 
 CPU_STK PourTaskStk[TASK_STACK_SIZE];
 
-extern OS_EVENT * controller_semaphore;
+extern OS_EVENT * pouring_semaphore;
 
 // For simultaneous dispensing
 void SimultaneousDispenseTaskInit(recipe * dispensing_recipe)
@@ -111,7 +111,7 @@ void SimultaneousDispenseTask(void * p_arg)
 		OSTimeDlyHMSM(0, 0, 0, 50); // Check every 50ms
 	}
 
-	OSSemPost(controller_semaphore);
+	OSSemPost(pouring_semaphore);
     OSTaskDel(OS_PRIO_SELF);
 }
 
@@ -144,7 +144,7 @@ void OrderedDispenseTask(void * p_arg)
 		}
 	}
 
-	OSSemPost(controller_semaphore);
+	OSSemPost(pouring_semaphore);
     OSTaskDel(OS_PRIO_SELF);
 }
 

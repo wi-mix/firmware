@@ -16,8 +16,8 @@ static ALT_I2C_DEV_t * i2c2_device;
 #define HALF_FULL 32
 #define RX_BUFFER_SIZE 256
 #define TX_BUFFER_SIZE 256
-static uint8_t I2C2_Internal_RX_Buffer[RX_BUFFER_SIZE];
-static uint8_t I2C2_Internal_TX_Buffer[TX_BUFFER_SIZE];
+static uint8_t I2C2_Internal_RX_Buffer[RX_BUFFER_SIZE] = { 0 };
+static uint8_t I2C2_Internal_TX_Buffer[TX_BUFFER_SIZE] = { 0 };
 static uint8_t TX_Size = 0;
 static uint32_t rx_write_pos = 0;
 static uint32_t rx_read_pos = 0;
